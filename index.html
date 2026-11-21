@@ -390,10 +390,12 @@ function render(d) {
       hovertemplate: "NQ %{x:.0f}<br>%{customdata}<br>GEX %{z:.2f} Mrd $<extra></extra>"}],
       lay(Object.assign(scene("NQ-Preis", "Laufzeit", "GEX"),
         {yaxis: {title: "Laufzeit", tickvals: L.y.map((_, i) => i), ticktext: L.y, color: "#868991", gridcolor: "#222"}})), cfg);
-    const z0 = L.z[0], top = z0.indexOf(Math.max(...z0)), low = z0.indexOf(Math.min(...z0));
-    $("gexToday").innerHTML = `<p>Für heute (0–1 Tage) liegt der stärkste <span class="up">Magnet</span> bei <b>${fmt(L.x[top], 0)}</b>,
-      die stärkste <span class="down">Beschleunigungszone</span> bei <b>${fmt(L.x[low], 0)}</b>. Kommt der Preis dorthin,
-      eher Abprall (grün) bzw. schnelle Bewegung durch (rot).</p>`;
+    const bi = Math.max(0, L.z.findIndex(r => r.some(v => Math.abs(v) > 1e-6)));
+    const z0 = L.z[bi], mx = Math.max(...z0), mn = Math.min(...z0);
+    const parts = [];
+    if (mx > 0) parts.push(`der stärkste <span class="up">Magnet</span> bei <b>${fmt(L.x[z0.indexOf(mx)], 0)}</b> (Preis prallt dort eher ab)`);
+    if (mn < 0) parts.push(`die stärkste <span class="down">Beschleunigungszone</span> bei <b>${fmt(L.x[z0.indexOf(mn)], 0)}</b> (Preis läuft dort eher schnell durch)`);
+    $("gexToday").innerHTML = `<p>Nächste Laufzeit (${L.y[bi]}): ${parts.join(", ") || "kaum Gamma"}.</p>`;
   }
 }
 

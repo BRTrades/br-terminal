@@ -360,6 +360,33 @@ def orderflow(c5, m1, tick=5.0):
             absorb.append({"time": c["time"], "side": "bull", "price": c["low"], "vol_x": round(c["volume"] / avg, 1)})
         elif c["volume"] > 1.8 * avg and dr >= 0.25 and pos <= 0.5:
             absorb.append({"time": c["time"], "side": "bear", "price": c["high"], "vol_x": round(c["volume"] / avg, 1)})
+    # Heatmap: gehandeltes Volumen je Preisstufe (10 Pkt) je 5-Min-Kerze, letzte 300 Kerzen
+    src = m1 or c5
+    hm_tick = 10.0
+    t0 = c5[-min(len(c5), 300)]["time"]
+    cells = {}
+    for c in src:
+        if c["time"] < t0:
+            continue
+        k = c["time"] - c["time"] % 300
+        lo, hi = math.floor(c["low"] / hm_tick), math.floor(c["high"] / hm_tick)
+        n = hi - lo + 1
+        for b in range(lo, hi + 1):
+            cells[(k, b)] = cells.get((k, b), 0) + c["volume"] / n
+    heat = [[k, round(b * hm_tick, 1), round(v)] for (k, b), v in sorted(cells.items()) if v >= 1]
+    # Volume-Ladder: Käufe/Verkäufe je Preisstufe in der aktuellen Session
+    lad = {}
+    for c in src:
+        if session_id(c["time"]) != cur or not c["volume"]:
+            continue
+        share = max(0.0, min(1.0, (c["delta"] / c["volume"] + 1) / 2))
+        lo, hi = math.floor(c["low"] / tick), math.floor(c["high"] / tick)
+        n = hi - lo + 1
+        for b in range(lo, hi + 1):
+            x = lad.setdefault(b, [0.0, 0.0])
+            x[0] += c["volume"] / n * share
+            x[1] += c["volume"] / n * (1 - share)
+    ladder = [[round(b * tick, 2), round(v[0]), round(v[1])] for b, v in sorted(lad.items())]
     sess = [c for c in c5 if session_id(c["time"]) == cur]
     buy = sum(max(c["delta"], 0) for c in sess); sell = -sum(min(c["delta"], 0) for c in sess)
     last6 = sum(c["delta"] for c in sess[-6:])
@@ -375,7 +402,8 @@ def orderflow(c5, m1, tick=5.0):
     return {"session": cur, "cvd": sess[-1]["cvd"] if sess else 0, "buy_vol": buy, "sell_vol": sell,
             "delta_30m": last6, "vwap": sess[-1]["vwap"] if sess else None, "vp": vp,
             "prev_vp": {k: pvp[k] for k in ("poc", "vah", "val")} if pvp else None,
-            "absorption": absorb[-25:], "divergence": div}
+            "absorption": absorb[-25:], "divergence": div, "heat": heat, "heat_tick": hm_tick,
+            "ladder": ladder, "tick": tick}
 
 
 def session_levels(candles):

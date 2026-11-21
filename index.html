@@ -4,549 +4,437 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BR Terminal</title>
-<meta name="theme-color" content="#0f1824">
+<meta name="theme-color" content="#0c0e12">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="BR Terminal">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
 :root{
-  --ink:#0f1824;--ink2:#132030;--rule:#223246;--rule2:#2d4058;
-  --text:#dfe7ef;--muted:#8aa0b6;--dim:#7a8ea4;
-  --buy:#2ec4b6;--sell:#f25f5c;--amber:#f2c14e;--steel:#9fb3c8;--blue:#4c9aff;
+  --bg:#0c0e12;--panel:#14171c;--head:#1b1f26;--line:#262b33;--line2:#323843;
+  --text:#d1d4dc;--muted:#8b929e;--hi:#ffffff;
+  --buy:#1fbf75;--sell:#e5484d;--blue:#2f80ed;--amber:#f0a92e;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--ink);color:var(--text);font-family:"Barlow Semi Condensed",system-ui,sans-serif;font-size:15px;font-variant-numeric:tabular-nums lining-nums;-webkit-font-smoothing:antialiased}
-body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-.num{font-variant-numeric:tabular-nums}
-.up{color:var(--buy)}.down{color:var(--sell)}.warn{color:var(--amber)}.muted{color:var(--muted)}
-button{font-family:inherit}
-:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-a,button,.chip,.info{cursor:pointer;transition:color .15s ease,background-color .15s ease,border-color .15s ease}
-@media(prefers-reduced-motion:reduce){a,button,.chip,.info{transition:none}}
-.arr{display:inline-block;width:10px;height:10px;vertical-align:baseline}
-.ohlc{position:absolute;left:12px;top:30px;z-index:4;display:flex;gap:12px;font-size:13px;color:var(--muted);pointer-events:none;flex-wrap:wrap}
-.ohlc b{color:var(--text);font-weight:500;margin-left:3px}
-@media(max-width:800px){.chip{padding:11px 13px}.info{width:30px;height:30px;line-height:28px;font-size:13px}.ohlc{font-size:12px;gap:8px}}
+html,body{margin:0;background:var(--bg);color:var(--text);font:12px/1.35 "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit}
+a,button{cursor:pointer}
+:focus-visible{outline:1px solid var(--blue);outline-offset:1px}
+.up{color:var(--buy)}.down{color:var(--sell)}.muted{color:var(--muted)}.amb{color:var(--amber)}
 
-/* Kopfzeile als Werkzeugleiste */
-header{display:flex;align-items:stretch;border-bottom:1px solid var(--rule);background:var(--ink2);min-height:48px}
-.logo{display:flex;align-items:center;gap:10px;padding:0 16px;border-right:1px solid var(--rule);font-weight:700;font-size:17px}
-.logo i{font-style:normal;font-weight:700;font-size:12px;color:var(--ink);background:var(--amber);padding:3px 5px;border-radius:2px}
-.logo span{color:var(--muted);font-weight:500}
-nav.tabs{display:flex}
-nav.tabs a{display:flex;align-items:center;padding:0 18px;color:var(--muted);text-decoration:none;font-weight:500;border-right:1px solid var(--rule);border-bottom:2px solid transparent}
-nav.tabs a:hover{color:var(--text)}
-nav.tabs a.on{color:var(--text);border-bottom-color:var(--amber);background:var(--ink)}
+/* Toolbar */
+.bar{display:flex;align-items:center;height:34px;background:var(--head);border-bottom:1px solid var(--line);gap:0;overflow-x:auto;scrollbar-width:none}
+.bar::-webkit-scrollbar{display:none}
+.brand{padding:0 12px;font-weight:700;color:var(--hi);letter-spacing:.02em;border-right:1px solid var(--line);height:100%;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.brand i{font-style:normal;background:var(--blue);color:#fff;font-size:10px;padding:1px 4px;border-radius:2px}
+.sym{display:flex;align-items:center;gap:10px;padding:0 12px;border-right:1px solid var(--line);height:100%;white-space:nowrap}
+.sym b{color:var(--hi);font-size:13px}
+.sym .px{font-size:14px;font-weight:600;color:var(--hi)}
+.tabs{display:flex;height:100%}
+.tabs a{display:flex;align-items:center;padding:0 14px;color:var(--muted);text-decoration:none;border-right:1px solid var(--line);white-space:nowrap}
+.tabs a:hover{color:var(--text);background:#20252d}
+.tabs a.on{color:var(--hi);background:var(--panel);box-shadow:inset 0 -2px 0 var(--blue)}
 .sp{flex:1}
-.stamp{display:flex;align-items:center;gap:8px;padding:0 16px;color:var(--muted);font-size:13px;border-left:1px solid var(--rule)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--buy)}
-.dot.old{background:var(--amber)}
-.ticker{display:none}
+.status{display:flex;align-items:center;gap:6px;padding:0 12px;color:var(--muted);white-space:nowrap;border-left:1px solid var(--line);height:100%}
+.led{width:6px;height:6px;border-radius:50%;background:var(--buy)}
+.led.off{background:var(--amber)}
 
-/* Druck-Balken: Käufer gegen Verkäufer */
-.pressure{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--rule)}
-.pressure .side-lbl{font-size:14px;color:var(--muted);white-space:nowrap}
-.pressure .side-lbl b{font-size:20px;font-weight:700;margin-right:6px}
-.pbar{position:relative;height:16px;background:var(--sell);border-radius:1px;overflow:hidden}
-.pbar i{position:absolute;left:0;top:0;bottom:0;background:var(--buy);transition:width .8s ease}
-.pbar s{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--ink)}
-@media(prefers-reduced-motion:reduce){.pbar i{transition:none}}
-
-/* Seiten */
-.page{display:none}.page.on{display:block}
-.grid{display:grid}
-.cockpit{grid-template-columns:1fr 330px;align-items:stretch}
-.two{grid-template-columns:1fr 1fr}
-.two>.panel+.panel{border-left:1px solid var(--rule)}
-@media(max-width:1100px){.cockpit,.two{grid-template-columns:1fr}.two>.panel+.panel{border-left:0;border-top:1px solid var(--rule)}}
-.grid>.panel+.panel{border-top:1px solid var(--rule)}
-.panel{background:transparent;min-width:0;position:relative}
-.ph{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px 0;gap:10px}
-.ph h2{margin:0;font-size:15px;font-weight:600;color:var(--text)}
-.ph small{color:var(--dim);font-size:13px}
-.pb{padding:8px 16px 14px}
-
-/* Kennzahlen-Zeile */
-.stats{display:grid;grid-template-columns:auto repeat(4,1fr);border-bottom:1px solid var(--rule)}
-.stats>div{padding:10px 16px;border-right:1px solid var(--rule)}
-.stats>div:last-child{border-right:0}
-@media(max-width:800px){.stats{grid-template-columns:1fr 1fr}.stats>div{border-bottom:1px solid var(--rule)}.stats .price{grid-column:1/-1}}
-.price small{display:block;font-size:13px;color:var(--muted)}
-.price b{font-size:34px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
-.st > span{display:block;color:var(--muted);font-size:13px}
-.st b{font-size:20px;font-weight:600;white-space:nowrap}
-.bsbar{display:none}
-.badge{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:2px;font-size:12px;font-weight:600}
-.badge.closed{color:var(--ink);background:var(--amber)}
-.badge.live{color:var(--ink);background:var(--buy)}
-
-/* Chart */
-.chartbar{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--rule);gap:10px;flex-wrap:wrap}
-.chips{display:flex;flex-wrap:wrap;border:1px solid var(--rule2);border-radius:2px}
-.chip{border:0;border-right:1px solid var(--rule2);background:transparent;color:var(--dim);font-size:13px;padding:5px 11px;cursor:pointer}
-.chip:last-child{border-right:0}
-.chip.on{color:var(--text);background:var(--ink2)}
-.chartwrap{position:relative;height:660px;display:grid;grid-template-rows:62% 19% 19%}
-@media(max-width:800px){.chartwrap{height:78vh}}
+/* Arbeitsfläche */
+.page{display:none;flex:1;min-height:0}.page.on{display:flex;flex-direction:column}
+.ws{flex:1;display:grid;grid-template-columns:1fr 290px;gap:1px;background:var(--line);min-height:0}
+@media(max-width:900px){.ws{grid-template-columns:1fr}}
+.pnl{background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0}
+.ph{display:flex;align-items:center;height:26px;background:var(--head);border-bottom:1px solid var(--line);padding:0 8px;gap:8px;flex:none}
+.ph b{color:var(--hi);font-weight:600}
+.ph .r{margin-left:auto;color:var(--muted)}
+.tool{display:flex;gap:1px;margin-left:8px}
+.tg{border:1px solid var(--line2);background:transparent;color:var(--muted);padding:1px 7px;border-radius:2px;font-size:11px}
+.tg.on{color:var(--hi);background:#283040;border-color:#3a4558}
+@media(max-width:900px){.tg{padding:6px 10px;font-size:12px}.ph{height:auto;min-height:26px;flex-wrap:wrap;padding:4px 8px}.tool{flex-wrap:wrap;margin-left:0}.ws{display:flex;flex-direction:column}.col{display:flex;flex-direction:column}.ladder{max-height:420px}}
+.chartwrap{position:relative;flex:1;min-height:520px;display:grid;grid-template-rows:64% 18% 18%}
+@media(max-width:900px){.chartwrap{min-height:74vh}}
 .pane{position:relative;min-height:0}
-.pane+.pane{border-top:1px solid var(--rule)}
-#chart,#dchart,#cchart{position:absolute;inset:0}
-#vp{position:absolute;inset:0;pointer-events:none;z-index:2}
-.lab{position:absolute;left:12px;top:6px;font-size:13px;color:var(--muted);z-index:4;display:flex;align-items:center;gap:6px}
-.info{width:18px;height:18px;border-radius:50%;border:1px solid var(--rule2);background:var(--ink);color:var(--muted);font-weight:600;font-size:11px;cursor:pointer;padding:0;line-height:16px}
-.info:hover,.info.on{color:var(--ink);background:var(--amber);border-color:var(--amber)}
-.pop{position:absolute;z-index:10;left:12px;max-width:360px;background:var(--ink2);border:1px solid var(--rule2);border-radius:2px;padding:10px 12px;font-size:14px;line-height:1.45;display:none}
-.pop.on{display:block}
-.overlay{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:rgba(15,24,36,.92);text-align:center;color:var(--muted);font-size:14px;line-height:1.5;padding:20px}
-.overlay.off{display:none}
-.overlay b{display:block;color:var(--text);font-size:17px;margin-bottom:4px}
-.overlay button{margin-top:10px;border:1px solid var(--amber);background:transparent;color:var(--amber);border-radius:2px;padding:6px 14px;cursor:pointer}
-.spin{width:20px;height:20px;border-radius:50%;border:2px solid var(--rule2);border-top-color:var(--amber);margin:0 auto 10px;animation:rot 1s linear infinite}
-@keyframes rot{to{transform:rotate(360deg)}}
+.pane+.pane{border-top:1px solid var(--line)}
+.pane>div,.pane>canvas{position:absolute;inset:0}
+#heat{z-index:0}#chart{z-index:1}#bub{z-index:2;pointer-events:none}#vp{z-index:2;pointer-events:none}
+.lab{position:absolute;left:6px;top:4px;z-index:4;color:var(--muted);font-size:11px;display:flex;gap:10px;pointer-events:none;flex-wrap:wrap}
+.lab b{color:var(--text);font-weight:400}
+.ov{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:rgba(12,14,18,.9);color:var(--muted);text-align:center;padding:20px}
+.ov.off{display:none}
+.ov b{display:block;color:var(--hi);font-size:13px;margin-bottom:4px}
+.ov button{margin-top:8px;border:1px solid var(--blue);background:transparent;color:var(--blue);padding:4px 12px;border-radius:2px}
 
-/* Seitenleiste: eine Spalte mit Abschnitten */
-.side{border-left:1px solid var(--rule);background:var(--ink2)}
-@media(max-width:1100px){.side{border-left:0;border-top:1px solid var(--rule)}}
-.side>.panel+.panel{border-top:1px solid var(--rule)}
-.bias{font-size:30px;font-weight:700;line-height:1}
-.meter{height:4px;background:linear-gradient(90deg,var(--sell) 0 50%,var(--buy) 50% 100%);position:relative;margin:12px 0 6px;opacity:.85}
-.meter i{position:absolute;top:-5px;width:2px;height:14px;background:var(--text)}
-.reason{display:grid;grid-template-columns:14px 1fr;gap:6px;padding:5px 0;font-size:14px;line-height:1.35;color:#c4d0dc}
-.reason b{font-size:11px;line-height:19px}
-.pill{font-weight:600;font-size:16px}
-.pill.up{color:var(--buy)}.pill.down{color:var(--sell)}
-.small{font-size:14px;color:var(--muted);line-height:1.4;margin-top:4px}
-.sig{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:6px 0;font-size:14px;align-items:baseline;border-top:1px solid var(--rule)}
-.sig:first-child{border-top:0}
-.sig .tag{font-size:11px;font-weight:700;padding:1px 5px;border-radius:2px;color:var(--ink)}
-.sig .tag.bull{background:var(--buy)}.sig .tag.bear{background:var(--sell)}
-.ev{display:grid;grid-template-columns:44px 1fr auto;gap:10px;padding:6px 0;font-size:14px;align-items:baseline;border-top:1px solid var(--rule)}
-.ev:first-child{border-top:0}
-.ev.High .t{color:var(--sell);font-weight:600}
-.cd{font-size:13px;color:var(--amber)}
-.lv{width:100%;border-collapse:collapse;font-size:14px}
-.lv td{padding:5px 0;border-top:1px solid var(--rule)}
-.lv tr:first-child td{border-top:0}
-.lv td:nth-child(2),.lv td:nth-child(3){text-align:right}
-.lv tr.now td{color:var(--amber);text-align:center;font-weight:600;border-top:1px solid var(--amber);border-bottom:1px solid var(--amber)}
-.sw{display:inline-block;width:12px;height:2px;margin-right:8px;vertical-align:middle}
-button.copy{width:100%;margin-top:12px;border:1px solid var(--amber);border-radius:2px;padding:9px;font-weight:600;font-size:14px;cursor:pointer;color:var(--amber);background:transparent}
-button.copy:hover{background:var(--amber);color:var(--ink)}
+/* Rechte Spalte */
+.col{display:grid;grid-template-rows:1fr auto auto;gap:1px;background:var(--line);min-height:0}
+.ladder{flex:1;overflow:auto;min-height:260px;scrollbar-width:thin;scrollbar-color:#323843 transparent}
+.lr{display:grid;grid-template-columns:1fr 62px 1fr 34px;height:17px;align-items:center;font-size:11px;border-bottom:1px solid #191c22}
+.lr span{position:relative;height:100%;display:flex;align-items:center;padding:0 4px}
+.lr .s{justify-content:flex-end}
+.lr .s i,.lr .b i{position:absolute;top:2px;bottom:2px;opacity:.45}
+.lr .s i{right:0;background:var(--sell)}
+.lr .b i{left:0;background:var(--buy)}
+.lr .s em,.lr .b em{position:relative;font-style:normal}
+.lr .p{justify-content:center;color:var(--muted);background:#171a20}
+.lr .t{font-size:10px;color:var(--amber);padding:0 2px;white-space:nowrap;overflow:hidden}
+.lr span{overflow:hidden;white-space:nowrap}
+.lr.cur .p{background:var(--blue);color:#fff;font-weight:600}
+.lr.poc .p{color:var(--amber);font-weight:600}
+.lr.va .p{color:var(--text)}
+.lh{display:grid;grid-template-columns:1fr 62px 1fr 34px;font-size:10px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--line);text-align:center;position:sticky;top:0;background:var(--panel);z-index:2}
+.press{height:4px;background:var(--sell);position:relative}
+.press i{position:absolute;inset:0 auto 0 0;background:var(--buy)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;padding:6px 8px;font-size:12px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;text-align:right;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.why{padding:0 8px 6px;color:var(--muted);font-size:11px;line-height:1.45}
+.why div{display:flex;gap:6px}
+.sig{display:grid;grid-template-columns:30px 1fr auto;gap:6px;padding:3px 8px;font-size:11px;border-top:1px solid #191c22;align-items:center}
+.sig .k{font-size:10px;font-weight:700;text-align:center;border-radius:2px;color:#0c0e12}
+.sig .k.bull{background:var(--buy)}.sig .k.bear{background:var(--sell)}
+.cp{margin:6px 8px 8px;border:1px solid var(--line2);background:#1d222a;color:var(--text);padding:5px;border-radius:2px;font-size:11px}
+.cp:hover{border-color:var(--blue);color:var(--hi)}
 
 /* Andere Seiten */
-.plot{height:440px}
-.explain{padding:12px 16px 16px;border-top:1px solid var(--rule);font-size:15px;line-height:1.5;max-width:72ch}
-.explain h3{margin:0 0 4px;font-size:14px;font-weight:600;color:var(--muted)}
-.explain p{margin:0 0 10px}
-.explain .today p{padding-left:10px;border-left:2px solid var(--amber)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));border-top:1px solid var(--rule);border-left:1px solid var(--rule)}
-.tile{padding:12px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
-.tile span{display:block;color:var(--muted);font-size:13px}
-.tile b{font-size:22px;font-weight:600}
-.tile i{font-style:normal;font-size:14px;margin-left:6px}
-.news a{display:block;color:var(--text);text-decoration:none;padding:8px 0;border-top:1px solid var(--rule);font-size:15px;line-height:1.35;max-width:80ch}
-.news a:first-child{border-top:0}
-.news a:hover{color:var(--amber)}
-.news small{color:var(--muted);margin-right:8px}
-footer{color:var(--dim);font-size:12px;padding:14px 16px 90px;line-height:1.5;border-top:1px solid var(--rule)}
+.sheet{flex:1;display:grid;gap:1px;background:var(--line);grid-template-columns:1fr 1fr}
+@media(max-width:900px){.sheet{grid-template-columns:1fr}}
+.plot{height:420px}
+.txt{padding:8px 10px;color:var(--muted);font-size:12px;line-height:1.5;border-top:1px solid var(--line);max-width:75ch}
+.txt b{color:var(--text)}
+.txt p{margin:0 0 6px}
+table.t{width:100%;border-collapse:collapse;font-size:12px}
+table.t th{text-align:left;font-weight:400;color:var(--muted);padding:4px 8px;border-bottom:1px solid var(--line);background:var(--head);position:sticky;top:0}
+table.t td{padding:4px 8px;border-bottom:1px solid #191c22}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hi td:nth-child(2){color:var(--sell)}
+table.t a{color:var(--text);text-decoration:none}
+table.t a:hover{color:var(--hi);text-decoration:underline}
+.scroll{overflow:auto;flex:1}
+footer{color:#5d6470;font-size:10px;padding:4px 8px;border-top:1px solid var(--line);background:var(--head)}
 footer a{color:inherit}
-nav.bottom{display:none;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--ink2);border-top:1px solid var(--rule2);padding:0 0 env(safe-area-inset-bottom)}
-nav.bottom a{flex:1;text-align:center;color:var(--muted);text-decoration:none;font-size:14px;padding:13px 0;border-top:2px solid transparent}
-nav.bottom a b{display:none}
-nav.bottom a.on{color:var(--text);border-top-color:var(--amber)}
-@media(max-width:800px){header nav.tabs{display:none}nav.bottom{display:flex}.logo{border-right:0}}
+.mnav{display:none}
+@media(max-width:900px){.bar .tabs{display:none}.mnav{display:flex;position:sticky;bottom:0;background:var(--head);border-top:1px solid var(--line);z-index:20}
+  .mnav a{flex:1;text-align:center;padding:12px 0;color:var(--muted);text-decoration:none;font-size:12px}.mnav a.on{color:var(--hi);box-shadow:inset 0 2px 0 var(--blue)}}
 </style>
 </head>
 <body>
-<header>
-  <div class="logo"><i>BR</i>Terminal <span>NQ</span></div>
-  <nav class="tabs" id="topnav"></nav>
+<div class="bar">
+  <div class="brand"><i>BR</i>Terminal</div>
+  <div class="sym"><b>NQ</b><span class="muted">5m</span><span class="px" id="px">–</span><span id="chg"></span></div>
+  <nav class="tabs" id="tabs"></nav>
   <div class="sp"></div>
-  <div class="stamp"><span class="dot" id="dot"></span><span id="stamp">lädt …</span></div>
-</header>
-<div class="ticker"><div class="track" id="ticker"></div></div>
-
-<!-- ═════════ COCKPIT ═════════ -->
-<div class="page" id="p-cockpit">
-<div class="pressure" aria-label="Käufer gegen Verkäufer in dieser Session">
-  <div class="side-lbl"><b class="up num" id="pBuy">–</b>Käufe</div>
-  <div class="pbar"><i id="pBar" style="width:50%"></i><s></s></div>
-  <div class="side-lbl" style="text-align:right">Verkäufe<b class="down num" id="pSell" style="margin:0 0 0 6px">–</b></div>
+  <div class="status"><span class="led" id="led"></span><span id="stat">lädt</span></div>
 </div>
-<section class="grid cockpit">
-  <div class="panel">
-    <div class="stats">
-      <div class="price"><small>Nasdaq-Future, 5 Minuten <span class="badge" id="mktBadge"></span></small><b class="num" id="nqLast">–</b> <span id="nqChg" class="num"></span></div>
-      <div class="st"><span>CVD</span><b class="num" id="sCvd">–</b></div>
-      <div class="st"><span>Delta 30 Min</span><b class="num" id="sD30">–</b></div>
-      <div class="st"><span>VWAP</span><b class="num" id="sVwap">–</b></div>
-      <div class="st"><span>POC</span><b class="num" id="sPoc">–</b></div>
-    </div>
-    <div class="chartbar">
-      <div class="chips">
-        <button class="chip on" data-g="gex">GEX</button>
-        <button class="chip on" data-g="vp">Volume Profile</button>
-        <button class="chip on" data-g="sess">Vortag</button>
-        <button class="chip on" data-g="vwap">VWAP</button>
-        <button class="chip on" data-g="abs">Absorption</button>
-        <button class="chip" data-g="more">+ Mehr Level</button>
+
+<!-- COCKPIT -->
+<div class="page" id="p-cockpit">
+<div class="ws">
+  <div class="pnl">
+    <div class="ph"><b>NQ · Heatmap</b>
+      <div class="tool" id="tools">
+        <button class="tg on" data-k="heat">Heatmap</button>
+        <button class="tg on" data-k="bub">Blasen</button>
+        <button class="tg" data-k="candle">Kerzen</button>
+        <button class="tg on" data-k="vp">Profil</button>
+        <button class="tg on" data-k="lv">Level</button>
+        <button class="tg" data-k="more">+Level</button>
       </div>
-      <small class="muted">Kurse ca. 15 Min verzögert</small>
+      <span class="r" id="mk"></span>
     </div>
     <div class="chartwrap">
-      <div class="pane"><div id="chart"></div><canvas id="vp"></canvas>
-        <div class="ohlc" id="ohlc" aria-live="off"></div><div class="lab">Preis und Volume Profile <button class="info" data-i="vp" aria-label="Erklärung Volume Profile">i</button> <button class="info" data-i="abs" aria-label="Erklärung Absorption">●</button></div></div>
-      <div class="pane"><div id="dchart"></div><div class="lab">Delta je Kerze <button class="info" data-i="delta" aria-label="Erklärung Delta">i</button></div></div>
-      <div class="pane"><div id="cchart"></div><div class="lab">CVD seit Session-Start <button class="info" data-i="cvd" aria-label="Erklärung CVD">i</button></div></div>
-      <div class="pop" id="pop"></div>
-      <div class="overlay" id="overlay"><div><div class="spin"></div><b>Lade Marktdaten …</b>einen Moment</div></div>
+      <div class="pane"><canvas id="heat"></canvas><div id="chart"></div><canvas id="vp"></canvas><canvas id="bub"></canvas><div class="lab" id="ohlc"></div></div>
+      <div class="pane"><div id="dchart"></div><div class="lab"><span>Delta</span></div></div>
+      <div class="pane"><div id="cchart"></div><div class="lab"><span>CVD</span></div></div>
+      <div class="ov" id="ov"><div><b>Lade Daten</b></div></div>
     </div>
   </div>
-
-  <div class="side">
-    <div class="panel"><div class="ph"><h2>Tagesrichtung</h2><small id="biasScore"></small></div>
-      <div class="pb"><div class="bias" id="biasLabel">–</div><div class="meter"><i id="biasPin" style="left:50%"></i></div><div id="reasons"></div></div></div>
-    <div class="panel"><div class="ph"><h2>Marktverhalten</h2><small>aus Optionsdaten</small></div>
-      <div class="pb"><span class="pill" id="regPill">–</span><div class="small" id="regText"></div></div></div>
-    <div class="panel"><div class="ph"><h2>Orderflow-Signale</h2><small id="sigSub">aktuelle Session</small></div>
-      <div class="pb" id="signals"></div></div>
-    <div class="panel"><div class="ph"><h2>Nächste Termine</h2><small>USA, Uhrzeit MEZ</small></div>
-      <div class="pb" id="calNext"></div></div>
-    <div class="panel"><div class="ph"><h2>Level nahe am Kurs</h2></div>
-      <div class="pb"><table class="lv" id="lvNear"></table><button class="copy" id="copyBtn">GEX-Level für TradingView kopieren</button></div></div>
+  <div class="col">
+    <div class="pnl" style="min-height:0">
+      <div class="ph"><b>Volume Ladder</b><span class="r" id="ladSum"></span></div>
+      <div class="press"><i id="pr" style="width:50%"></i></div>
+      <div class="ladder" id="ladder"></div>
+    </div>
+    <div class="pnl">
+      <div class="ph"><b>Kontext</b><span class="r" id="biasTag"></span></div>
+      <dl class="kv" id="kv"></dl>
+      <div class="why" id="why"></div>
+      <button class="cp" id="cp">GEX-String kopieren</button>
+    </div>
+    <div class="pnl">
+      <div class="ph"><b>Signale</b><span class="r" id="sigSub"></span></div>
+      <div id="sig"></div>
+    </div>
   </div>
-</section>
+</div>
 </div>
 
-<!-- ═════════ OPTIONEN ═════════ -->
+<!-- OPTIONEN -->
 <div class="page" id="p-optionen">
-<section class="grid two">
-  <div class="panel">
-    <div class="ph"><h2>Gamma-Landschaft NDX → NQ</h2><small>ziehen = drehen</small></div>
-    <div class="plot" id="gexplot"></div>
-    <div class="explain">
-      <h3>Was zeigt das?</h3>
-      <p>Wo das <b>Dealer-Gamma</b> sitzt, nach NQ-Preis und Laufzeit. <span class="up">Grüne Berge</span> = positives Gamma: Magnet/Bremse, Preis prallt eher ab. <span class="down">Rote Täler</span> = negatives Gamma: Preis wird beschleunigt, Level brechen eher.</p>
-      <h3>Was heißt das heute?</h3><div class="today" id="gexToday"></div>
-    </div>
-  </div>
-  <div class="panel">
-    <div class="ph"><h2>Volatilitäts-Oberfläche NDX</h2><small>ziehen = drehen</small></div>
-    <div class="plot" id="vol"></div>
-    <div class="explain">
-      <h3>Was zeigt das?</h3>
-      <p>Wie <b>teuer Optionen</b> sind. Links = Puts unter dem Kurs, rechts = Calls darüber, Tiefe = Laufzeit. Rot/hoch = teuer = Markt erwartet große Bewegungen.</p>
-      <h3>Was heißt das heute?</h3><div class="today" id="volToday"></div>
-    </div>
-  </div>
-</section>
+<div class="sheet">
+  <div class="pnl"><div class="ph"><b>Gamma NDX → NQ</b><span class="r">ziehen = drehen</span></div><div class="plot" id="gexplot"></div>
+    <div class="txt"><p><b>Grün</b> = positives Gamma, Preis wird gebremst. <b>Rot</b> = negatives Gamma, Preis wird beschleunigt. Vorne = kurze Laufzeit, wirkt am stärksten.</p><div id="gexToday"></div></div></div>
+  <div class="pnl"><div class="ph"><b>Vola-Oberfläche NDX</b><span class="r">ziehen = drehen</span></div><div class="plot" id="vol"></div>
+    <div class="txt"><p>Höhe/Farbe = implizite Vola. Links Puts, rechts Calls, Tiefe = Tage. Hoch = Markt erwartet große Bewegung.</p><div id="volToday"></div></div></div>
+</div>
 </div>
 
-<!-- ═════════ NEWS ═════════ -->
+<!-- NEWS -->
 <div class="page" id="p-news">
-<section class="grid two">
-  <div class="panel"><div class="ph"><h2>Wirtschaftskalender USD</h2><small>MEZ · rot = hoher Impact</small></div><div class="pb" id="cal"></div></div>
-  <div class="panel"><div class="ph"><h2>Headlines</h2><small>CNBC · MarketWatch</small></div><div class="pb news" id="news"></div></div>
-</section>
+<div class="sheet">
+  <div class="pnl"><div class="ph"><b>Kalender USD</b><span class="r">MEZ</span></div><div class="scroll"><table class="t" id="cal"></table></div></div>
+  <div class="pnl"><div class="ph"><b>Headlines</b><span class="r">CNBC, MarketWatch</span></div><div class="scroll"><table class="t" id="news"></table></div></div>
+</div>
 </div>
 
-<!-- ═════════ MARKT ═════════ -->
+<!-- MARKT -->
 <div class="page" id="p-markt">
-<section class="grid">
-  <div class="panel"><div class="ph"><h2>Märkte</h2><small>zum Vortag</small></div><div class="pb"><div class="tiles" id="market"></div></div></div>
-  <div class="panel"><div class="ph"><h2>Magnificent 7</h2><small>~40 % vom Nasdaq 100</small></div><div class="pb"><div class="tiles" id="mag7"></div></div></div>
-</section>
+<div class="sheet">
+  <div class="pnl"><div class="ph"><b>Märkte</b></div><div class="scroll"><table class="t" id="mkt"></table></div></div>
+  <div class="pnl"><div class="ph"><b>Magnificent 7</b></div><div class="scroll"><table class="t" id="mag"></table></div></div>
+</div>
 </div>
 
-<footer>Kostenlose, verzögerte Daten: Kurse Yahoo (~10–15 Min), Optionen CBOE/Yahoo, Kalender ForexFactory, News CNBC/MarketWatch. Delta = Schätzung aus 1-Min-Daten (Tick-Regel), kein echtes Bid/Ask. Kein Signal-System. Update alle 15 Min. Charts: <a href="https://www.tradingview.com/lightweight-charts/" style="color:inherit">TradingView Lightweight Charts</a>.</footer>
-<nav class="bottom" id="botnav"></nav>
+<nav class="mnav" id="mnav"></nav>
+<footer>Daten verzögert (Yahoo ~15 Min, Optionen CBOE/Yahoo). Delta/Heatmap aus 1-Min-Daten geschätzt, kein Orderbuch. Charts: <a href="https://www.tradingview.com/lightweight-charts/">TradingView Lightweight Charts</a>.</footer>
 
 <script>
 const $ = id => document.getElementById(id);
 const fmt = (v, d = 2) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("de-DE", {minimumFractionDigits: d, maximumFractionDigits: d});
-const kfmt = v => v == null ? "–" : (v >= 0 ? "+" : "") + (Math.abs(v) >= 1e6 ? fmt(v / 1e6, 2) + " M" : Math.abs(v) >= 1e3 ? fmt(v / 1e3, 1) + " K" : fmt(v, 0));
-const pct = v => v == null ? "" : `<i class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : ""}${fmt(v)} %</i>`;
-const berlin = (iso, opt) => new Date(iso).toLocaleString("de-DE", Object.assign({timeZone: "Europe/Berlin"}, opt));
-// [Name, Farbe, Linienstärke, Gruppe, Kern-Level?]
-const TAG = {
-  CW: ["Call Wall", "#2ec4b6", 2, "gex", 1], PW: ["Put Wall", "#f25f5c", 2, "gex", 1], ZG: ["Zero Gamma", "#f2c14e", 2, "gex", 1],
-  "G+": ["GEX +", "#6fd6b0", 1, "gex", 0], "G-": ["GEX −", "#e58a9b", 1, "gex", 0],
-  POC: ["POC", "#f2c14e", 2, "vp", 1], VAH: ["VAH", "#7f93a8", 1, "vp", 1], VAL: ["VAL", "#7f93a8", 1, "vp", 1],
-  pPOC: ["Vortag POC", "#7c6bd6", 1, "sess", 0], pVAH: ["Vortag VAH", "#5d5491", 1, "sess", 0], pVAL: ["Vortag VAL", "#5d5491", 1, "sess", 0],
-  PDH: ["Vortag High", "#9aa7ff", 1, "sess", 1], PDL: ["Vortag Low", "#9aa7ff", 1, "sess", 1], PDC: ["Vortag Close", "#6b7290", 1, "sess", 0],
-  pVWAP: ["Vortag VWAP", "#d9dbe4", 1, "sess", 0], ONH: ["Overnight High", "#3cc8ff", 1, "sess", 0], ONL: ["Overnight Low", "#3cc8ff", 1, "sess", 0]
-};
-const INFO = {
-  vp: "<b>Volume Profile</b> (lila Balken rechts): wo in dieser Session am meisten gehandelt wurde. <b>POC</b> (orange) = Preis mit dem meisten Volumen, wirkt oft wie ein Magnet. <b>Value Area</b> (VAH–VAL) = 70 % des Volumens, der „faire“ Bereich. Außerhalb davon ist der Preis entweder im Trend oder wird zurückgeholt.",
-  abs: "<b>Absorption ●</b>: Kerze mit sehr viel Volumen und einseitigem Delta, aber der Preis bewegt sich nicht in diese Richtung. Heißt: große Limit-Orders fangen den Druck ab. <span class='up'>Grün</span> = Verkäufer werden absorbiert (möglicher Boden), <span class='down'>rot</span> = Käufer werden absorbiert (mögliches Top).",
-  delta: "<b>Delta</b> pro Kerze = aggressive Käufe minus aggressive Verkäufe. <span class='up'>Grün</span> = Käufer drücken, <span class='down'>rot</span> = Verkäufer drücken. Großes Delta ohne Preisbewegung = Absorption. Hinweis: geschätzt aus 1-Min-Daten, kein echtes Bid/Ask.",
-  cvd: "<b>CVD</b> = Delta aufsummiert seit Session-Start (00:00 MEZ). Läuft parallel zum Preis = Bewegung ist gesund. <b>Divergenz</b>: Preis macht neues Hoch, CVD nicht = Käufer werden müde (und umgekehrt)."
-};
-const mobile = () => innerWidth < 800;
-const ARR = up => `<svg class="arr" viewBox="0 0 10 10" aria-hidden="true"><path d="${up ? "M5 1 9 9H1z" : "M1 1h8L5 9z"}" fill="currentColor"/></svg>`;
+const kf = v => v == null ? "–" : (Math.abs(v) >= 1e6 ? fmt(v / 1e6, 2) + "M" : Math.abs(v) >= 1e3 ? fmt(v / 1e3, 1) + "K" : fmt(v, 0));
+const sg = v => (v >= 0 ? "+" : "") + kf(v);
+const pc = v => v == null ? "" : `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : ""}${fmt(v)}%</span>`;
+const ber = (iso, o) => new Date(iso).toLocaleString("de-DE", Object.assign({timeZone: "Europe/Berlin"}, o));
+const hm = t => new Date(t * 1000).toLocaleTimeString("de-DE", {timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit"});
+const dhm = t => new Date(t * 1000).toLocaleString("de-DE", {timeZone: "Europe/Berlin", weekday: "short", hour: "2-digit", minute: "2-digit"});
 const sessId = t => new Date((t + 6 * 3600) * 1000).toLocaleDateString("en-CA", {timeZone: "America/New_York"});
-const dayTime = t => new Date(t * 1000).toLocaleString("de-DE", {timeZone: "Europe/Berlin", weekday: "short", hour: "2-digit", minute: "2-digit"});
-let chart, dchart, cchart, candle, deltaS, cvdS, vwapS, lines = [], DATA, show = {gex: true, vp: true, sess: true, vwap: true, abs: true, more: false};
+const narrow = () => innerWidth < 900;
+const TAG = {CW: ["CW", "#1fbf75", 1], PW: ["PW", "#e5484d", 1], ZG: ["ZG", "#f0a92e", 1], "G+": ["G+", "#4f9e86", 0], "G-": ["G−", "#a5585b", 0],
+  POC: ["POC", "#f0a92e", 1], VAH: ["VAH", "#8b929e", 1], VAL: ["VAL", "#8b929e", 1], PDH: ["PDH", "#6f8fd8", 1], PDL: ["PDL", "#6f8fd8", 1],
+  PDC: ["PDC", "#59606b", 0], pVWAP: ["pVWAP", "#9aa0aa", 0], ONH: ["ONH", "#4fa3c7", 0], ONL: ["ONL", "#4fa3c7", 0], pPOC: ["pPOC", "#a07a3a", 0]};
+let D, chart, dchart, cchart, line, candle, dS, cS, vw, plines = [];
+const on = {heat: true, bub: true, candle: false, vp: true, lv: true, more: false};
 
-function initChart() {
-  const tf = t => new Date(t * 1000).toLocaleTimeString("de-DE", {timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit"});
-  const base = showTime => ({
-    autoSize: true,
-    layout: {background: {type: "solid", color: "transparent"}, textColor: "#7f93a8", fontFamily: "Barlow Semi Condensed, sans-serif", fontSize: 12, attributionLogo: showTime},
-    grid: {vertLines: {color: "rgba(159,179,200,.06)"}, horzLines: {color: "rgba(159,179,200,.06)"}},
-    rightPriceScale: {borderColor: "#223246", minimumWidth: 86},
-    timeScale: {borderColor: "#223246", timeVisible: true, tickMarkFormatter: tf, rightOffset: 14, barSpacing: 7, visible: showTime},
-    localization: {timeFormatter: tf, priceFormatter: p => fmt(p, 2)},
-    crosshair: {mode: 0, vertLine: {color: "rgba(159,179,200,.35)", labelBackgroundColor: "#2d4058"}, horzLine: {color: "rgba(159,179,200,.35)", labelBackgroundColor: "#2d4058"}},
-    handleScale: {axisPressedMouseMove: {price: true, time: true}}
-  });
+function init() {
+  const tf = t => hm(t);
+  const base = (vis, pf) => ({autoSize: true,
+    layout: {background: {type: "solid", color: "transparent"}, textColor: "#8b929e", fontFamily: "Segoe UI, Roboto, Arial, sans-serif", fontSize: 11, attributionLogo: vis},
+    grid: {vertLines: {color: "rgba(255,255,255,.03)"}, horzLines: {color: "rgba(255,255,255,.03)"}},
+    rightPriceScale: {borderColor: "#262b33", minimumWidth: 70}, timeScale: {borderColor: "#262b33", timeVisible: true, tickMarkFormatter: tf, rightOffset: 10, barSpacing: 8, visible: vis},
+    localization: {timeFormatter: tf, priceFormatter: pf || (p => fmt(p, 2))},
+    crosshair: {mode: 0, vertLine: {color: "#5d6470", labelBackgroundColor: "#323843"}, horzLine: {color: "#5d6470", labelBackgroundColor: "#323843"}}});
   chart = LightweightCharts.createChart($("chart"), base(false));
-  dchart = LightweightCharts.createChart($("dchart"), base(false));
-  cchart = LightweightCharts.createChart($("cchart"), base(true));
-  const kf = {type: "custom", formatter: v => kfmt(v).replace("+", "")};
-  candle = chart.addCandlestickSeries({upColor: "rgba(0,0,0,0)", downColor: "#f25f5c", borderVisible: true, borderUpColor: "#2ec4b6", borderDownColor: "#f25f5c", wickUpColor: "#2ec4b6", wickDownColor: "#f25f5c"});
-  vwapS = chart.addLineSeries({color: "#9fb3c8", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false});
-  deltaS = dchart.addHistogramSeries({priceLineVisible: false, lastValueVisible: false, priceFormat: kf});
-  dchart.priceScale("right").applyOptions({scaleMargins: {top: .22, bottom: .06}});
-  cvdS = cchart.addAreaSeries({lineColor: "#4c9aff", topColor: "rgba(76,154,255,.18)", bottomColor: "rgba(76,154,255,0)", lineWidth: 2, priceLineVisible: false, priceFormat: kf});
-  cchart.priceScale("right").applyOptions({scaleMargins: {top: .22, bottom: .06}});
-  const all = [chart, dchart, cchart];
-  let sync = false;
-  all.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
-    if (sync || !r) return; sync = true; all.forEach(o => o !== c && o.timeScale().setVisibleLogicalRange(r)); sync = false;
-  }));
-  chart.subscribeCrosshairMove(p => showOHLC(p && p.time ? p.time : null));
-  requestAnimationFrame(drawVP);
+  dchart = LightweightCharts.createChart($("dchart"), base(false, v => kf(v)));
+  cchart = LightweightCharts.createChart($("cchart"), base(true, v => kf(v)));
+  line = chart.addLineSeries({color: "#e8eaed", lineWidth: 1.5, priceLineColor: "#2f80ed", lastValueVisible: true});
+  candle = chart.addCandlestickSeries({upColor: "rgba(0,0,0,0)", downColor: "#e5484d", borderUpColor: "#1fbf75", borderDownColor: "#e5484d", wickUpColor: "#1fbf75", wickDownColor: "#e5484d", visible: false, lastValueVisible: false, priceLineVisible: false});
+  vw = chart.addLineSeries({color: "#f0a92e", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false});
+  const pf = {type: "custom", formatter: v => kf(v)};
+  dS = dchart.addHistogramSeries({priceLineVisible: false, lastValueVisible: false, priceFormat: pf});
+  cS = cchart.addLineSeries({color: "#2f80ed", lineWidth: 1.5, priceLineVisible: false, priceFormat: pf});
+  [dchart, cchart].forEach(c => c.priceScale("right").applyOptions({scaleMargins: {top: .2, bottom: .05}}));
+  const all = [chart, dchart, cchart]; let busy = false;
+  all.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => { if (busy || !r) return; busy = true; all.forEach(o => o !== c && o.timeScale().setVisibleLogicalRange(r)); busy = false; }));
+  chart.subscribeCrosshairMove(p => ohlc(p && p.time));
+  requestAnimationFrame(paint);
 }
 
-function showOHLC(t) {
-  const cs = DATA?.nq?.candles; if (!cs?.length) return;
-  const c = t ? cs.find(x => x.time === t) : cs[cs.length - 1]; if (!c) return;
-  const ch = c.close - c.open;
-  $("ohlc").innerHTML = `<span>${dayTime(c.time)}</span><span>O<b>${fmt(c.open, 2)}</b></span><span>H<b>${fmt(c.high, 2)}</b></span><span>L<b>${fmt(c.low, 2)}</b></span><span>C<b class="${ch >= 0 ? "up" : "down"}">${fmt(c.close, 2)}</b></span><span>Delta<b class="${(c.delta || 0) >= 0 ? "up" : "down"}">${kfmt(c.delta || 0)}</b></span><span>Vol<b>${kfmt(c.volume).replace("+", "")}</b></span>`;
+function series() { return on.candle ? candle : line; }
+
+function canvasFit(cv) {
+  const r = devicePixelRatio || 1, w = cv.parentElement.clientWidth, h = cv.parentElement.clientHeight;
+  if (cv.width !== w * r || cv.height !== h * r) { cv.width = w * r; cv.height = h * r; cv.style.width = w + "px"; cv.style.height = h + "px"; }
+  const x = cv.getContext("2d"); x.setTransform(r, 0, 0, r, 0, 0); x.clearRect(0, 0, w, h); return [x, w, h];
 }
 
-function drawVP() {
-  const cv = $("vp"), wrap = $("chart");
-  const dpr = devicePixelRatio || 1, W = wrap.clientWidth, H = wrap.clientHeight;
-  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px"; }
-  const ctx = cv.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-  const vp = DATA?.orderflow?.vp;
-  if (show.vp && vp?.bins?.length) {
-    const right = W - chart.priceScale("right").width() - 4, maxW = Math.min(150, W * .18);
-    const mx = Math.max(...vp.bins.map(b => b[1]));
-    const step = vp.bins.length > 1 ? Math.abs(vp.bins[1][0] - vp.bins[0][0]) : 5;
-    const limit = H;
-    for (const [p, v] of vp.bins) {
-      const y1 = candle.priceToCoordinate(p + step / 2), y2 = candle.priceToCoordinate(p - step / 2);
-      if (y1 == null || y2 == null || Math.max(y1, y2) < 0 || Math.min(y1, y2) > limit) continue;
-      const h = Math.max(1, Math.abs(y2 - y1) - 1), w = v / mx * maxW;
-      const inVA = p >= vp.val && p <= vp.vah, isPoc = Math.abs(p - vp.poc) < step / 2;
-      ctx.fillStyle = isPoc ? "rgba(242,193,78,.9)" : inVA ? "rgba(127,147,168,.42)" : "rgba(127,147,168,.15)";
-      ctx.fillRect(right - w, Math.min(y1, y2), w, h);
+// Bookmap-ähnliche Farbskala: dunkel → blau → cyan → gelb → orange → weiß
+const STOPS = [[0, [12, 14, 18, 0]], [.12, [10, 30, 80, .55]], [.3, [12, 80, 170, .75]], [.5, [0, 170, 210, .85]], [.68, [240, 210, 60, .9]], [.85, [255, 140, 30, .95]], [1, [255, 255, 255, 1]]];
+function heatCol(f) {
+  for (let i = 1; i < STOPS.length; i++) if (f <= STOPS[i][0]) {
+    const [a, ca] = STOPS[i - 1], [b, cb] = STOPS[i], t = (f - a) / (b - a);
+    const c = ca.map((v, j) => v + (cb[j] - v) * t); return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${c[3].toFixed(2)})`;
+  }
+  return "rgba(255,255,255,1)";
+}
+
+function paint() {
+  const S = series(), of = D?.orderflow, ts = chart.timeScale();
+  // Heatmap
+  let [x, W, H] = canvasFit($("heat"));
+  const pw = W - chart.priceScale("right").width();
+  if (on.heat && of?.heat?.length) {
+    const bs = ts.options().barSpacing, step = of.heat_tick || 10;
+    if (!paint.q) { const v = of.heat.map(c => c[2]).sort((a, b) => a - b); paint.q = v[Math.floor(v.length * .995)] || 1; }
+    for (const [t, p, v] of of.heat) {
+      const cx = ts.timeToCoordinate(t); if (cx == null || cx < -bs || cx > pw) continue;
+      const y1 = S.priceToCoordinate(p + step), y2 = S.priceToCoordinate(p); if (y1 == null || y2 == null) continue;
+      x.fillStyle = heatCol(Math.pow(Math.min(1, v / paint.q), 1.15));
+      x.fillRect(cx - bs / 2, Math.min(y1, y2), Math.min(bs + .5, pw - cx + bs / 2), Math.max(1, Math.abs(y2 - y1)));
     }
   }
-  chart.subscribeCrosshairMove(p => showOHLC(p && p.time ? p.time : null));
-  requestAnimationFrame(drawVP);
+  // Volume Profile
+  [x, W, H] = canvasFit($("vp"));
+  const vp = of?.vp;
+  if (on.vp && vp?.bins?.length) {
+    const right = W - chart.priceScale("right").width() - 2, mw = Math.min(110, W * .14), mx = Math.max(...vp.bins.map(b => b[1]));
+    const st = vp.bins.length > 1 ? Math.abs(vp.bins[1][0] - vp.bins[0][0]) : 5;
+    for (const [p, v] of vp.bins) {
+      const y1 = S.priceToCoordinate(p + st / 2), y2 = S.priceToCoordinate(p - st / 2); if (y1 == null || y2 == null) continue;
+      x.fillStyle = Math.abs(p - vp.poc) < st / 2 ? "rgba(240,169,46,.9)" : p >= vp.val && p <= vp.vah ? "rgba(139,146,158,.38)" : "rgba(139,146,158,.14)";
+      const w = v / mx * mw; x.fillRect(right - w, Math.min(y1, y2), w, Math.max(1, Math.abs(y2 - y1) - .5));
+    }
+  }
+  // Volumen-Blasen
+  [x, W, H] = canvasFit($("bub"));
+  const cs = D?.nq?.candles;
+  if (on.bub && cs?.length) {
+    if (!paint.vmax) { paint.vmax = Math.max(...cs.map(c => c.volume)); }
+    for (let i = 20; i < cs.length; i++) {
+      const c = cs[i]; let avg = 0; for (let j = i - 20; j < i; j++) avg += cs[j].volume; avg /= 20;
+      if (!avg || c.volume < 1.6 * avg) continue;
+      const cx = ts.timeToCoordinate(c.time); if (cx == null || cx < 0 || cx > pw) continue;
+      const cy = S.priceToCoordinate((c.high + c.low + c.close) / 3); if (cy == null) continue;
+      const r = 3 + 13 * Math.sqrt(c.volume / paint.vmax), buyShare = c.volume ? (c.delta / c.volume + 1) / 2 : .5;
+      x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2);
+      x.fillStyle = buyShare >= .5 ? `rgba(31,191,117,${.35 + .5 * (buyShare - .5) * 2})` : `rgba(229,72,77,${.35 + .5 * (.5 - buyShare) * 2})`;
+      x.fill(); x.lineWidth = 1; x.strokeStyle = buyShare >= .5 ? "#7ff0b8" : "#ff9a9d"; x.stroke();
+    }
+  }
+  requestAnimationFrame(paint);
 }
 
-function showOHLC(t) {
-  const cs = DATA?.nq?.candles; if (!cs?.length) return;
-  const c = t ? cs.find(x => x.time === t) : cs[cs.length - 1]; if (!c) return;
-  const ch = c.close - c.open;
-  $("ohlc").innerHTML = `<span>${dayTime(c.time)}</span><span>O<b>${fmt(c.open, 2)}</b></span><span>H<b>${fmt(c.high, 2)}</b></span><span>L<b>${fmt(c.low, 2)}</b></span><span>C<b class="${ch >= 0 ? "up" : "down"}">${fmt(c.close, 2)}</b></span><span>Delta<b class="${(c.delta || 0) >= 0 ? "up" : "down"}">${kfmt(c.delta || 0)}</b></span><span>Vol<b>${kfmt(c.volume).replace("+", "")}</b></span>`;
-}
-
-function allLevels(d) {
-  const out = [];
-  (d.gex?.levels || []).forEach(l => out.push({tag: l.tag, price: l.price}));
-  const vp = d.orderflow?.vp;
-  if (vp) { out.push({tag: "POC", price: vp.poc}, {tag: "VAH", price: vp.vah}, {tag: "VAL", price: vp.val}); }
-  const s = d.session || {};
-  ["PDH", "PDL", "PDC", "pVWAP", "ONH", "ONL", "pPOC"].forEach(k => s[k] != null && out.push({tag: k, price: s[k]}));
+function levels(d) {
+  const out = []; (d.gex?.levels || []).forEach(l => out.push([l.tag, l.price]));
+  const vp = d.orderflow?.vp; if (vp) out.push(["POC", vp.poc], ["VAH", vp.vah], ["VAL", vp.val]);
+  const s = d.session || {}; ["PDH", "PDL", "PDC", "pVWAP", "ONH", "ONL", "pPOC"].forEach(k => s[k] != null && out.push([k, s[k]]));
   return out;
 }
-
-function drawLevels() {
-  lines.forEach(l => candle.removePriceLine(l)); lines = [];
-  allLevels(DATA).filter(l => show[TAG[l.tag][3]] && (TAG[l.tag][4] || show.more)).forEach(l => {
-    const [name, col, w, g] = TAG[l.tag];
-    lines.push(candle.createPriceLine({price: l.price, color: col, lineWidth: w,
-      lineStyle: l.tag === "ZG" ? 2 : g === "sess" ? 1 : g === "vp" && l.tag !== "POC" ? 3 : 0, axisLabelVisible: true, title: mobile() ? "" : name}));
+function drawLines() {
+  [line, candle].forEach(S => plines.filter(p => p.s === S).forEach(p => S.removePriceLine(p.l))); plines = [];
+  const S = series();
+  if (on.lv) levels(D).filter(([t]) => TAG[t][2] || on.more).forEach(([t, p]) => {
+    const [n, c] = TAG[t];
+    plines.push({s: S, l: S.createPriceLine({price: p, color: c, lineWidth: 1, lineStyle: t === "ZG" ? 2 : t.startsWith("V") || t.startsWith("p") ? 1 : 0, axisLabelVisible: true, title: narrow() ? "" : n})});
   });
-  const ab = DATA?.orderflow?.absorption || [];
-  candle.setMarkers(show.abs ? ab.map(a => ({time: a.time, position: a.side === "bull" ? "belowBar" : "aboveBar",
-    color: a.side === "bull" ? "#2ec4b6" : "#f25f5c", shape: "circle", text: mobile() ? "" : "ABS"})) : []);
-  vwapS.applyOptions({visible: show.vwap});
+}
+
+function ohlc(t) {
+  const cs = D?.nq?.candles; if (!cs?.length) return;
+  const c = t ? cs.find(x => x.time === t) : cs[cs.length - 1]; if (!c) return;
+  $("ohlc").innerHTML = `<span>${dhm(c.time)}</span><span>O <b>${fmt(c.open)}</b></span><span>H <b>${fmt(c.high)}</b></span><span>L <b>${fmt(c.low)}</b></span><span>C <b class="${c.close >= c.open ? "up" : "down"}">${fmt(c.close)}</b></span><span>Δ <b class="${c.delta >= 0 ? "up" : "down"}">${sg(c.delta || 0)}</b></span><span>Vol <b>${kf(c.volume)}</b></span>`;
+}
+
+function ladder(d) {
+  const of = d.orderflow || {}, L = of.ladder || [], last = d.nq?.last, tk = of.tick || 5, vp = of.vp;
+  if (!L.length) { $("ladder").innerHTML = '<div class="why" style="padding:8px">Keine Daten</div>'; return; }
+  const mx = Math.max(...L.map(r => Math.max(r[1], r[2]))) || 1;
+  const tags = {}; levels(d).forEach(([t, p]) => { const k = Math.round(Math.floor(p / tk) * tk * 100); (tags[k] = tags[k] || []).push(TAG[t][0]); });
+  const rows = L.slice().reverse().map(([p, b, s]) => {
+    const k = Math.round(p * 100), cur = last >= p && last < p + tk, poc = vp && Math.abs(p - Math.floor(vp.poc / tk) * tk) < .01, va = vp && p >= vp.val && p <= vp.vah;
+    return `<div class="lr${cur ? " cur" : ""}${poc ? " poc" : ""}${va ? " va" : ""}"${cur ? ' id="lcur"' : ""}>
+      <span class="s"><i style="width:${s / mx * 100}%"></i><em>${s ? kf(s) : ""}</em></span><span class="p">${fmt(p, 2)}</span>
+      <span class="b"><i style="width:${b / mx * 100}%"></i><em>${b ? kf(b) : ""}</em></span><span class="t">${(tags[k] || []).join(" ")}</span></div>`;
+  }).join("");
+  $("ladder").innerHTML = `<div class="lh"><span>Verkauf</span><span>Preis</span><span>Kauf</span><span></span></div>` + rows;
+  const cur = $("lcur"); if (cur && !ladder.done) { cur.scrollIntoView({block: "center"}); ladder.done = true; }
+  const tb = of.buy_vol || 0, ts = of.sell_vol || 0, sh = tb + ts ? tb / (tb + ts) * 100 : 50;
+  $("pr").style.width = sh + "%";
+  $("ladSum").innerHTML = `<span class="up">${fmt(sh, 0)}%</span> / <span class="down">${fmt(100 - sh, 0)}%</span>`;
 }
 
 function render(d) {
-  DATA = d;
-  const age = (Date.now() - new Date(d.updated)) / 60000;
-  $("stamp").textContent = `Aktualisiert vor ${Math.round(age)} Min`;
-  $("dot").className = "dot" + (age > 40 ? " old" : "");
-
-  // Ticker
-  const tk = [...(d.market || []), ...(d.mag7 || [])].map(m => `<div class="tk"><span>${m.name}</span><b class="num">${fmt(m.last, m.last > 1000 ? 0 : 2)}</b>${pct(m.chg_pct)}</div>`).join("");
-  $("ticker").innerHTML = tk + tk;
-
-  // Stats
-  const of = d.orderflow || {}, nqm = (d.market || []).find(m => m.sym === "NQ=F"), last = d.nq?.last;
-  $("nqLast").textContent = fmt(last, 2);
-  $("nqChg").innerHTML = nqm ? pct(nqm.chg_pct) : "";
-  const tot = (of.buy_vol || 0) + (of.sell_vol || 0), share = tot ? of.buy_vol / tot * 100 : 50;
-  if ($("sDelta")) $("sDelta").innerHTML = `<span class="${share >= 50 ? "up" : "down"}">${fmt(share, 0)} % Käufe</span>`;
-  $("pBar").style.width = share + "%";
-  $("pBuy").textContent = tot ? fmt(share, 0) + " %" : "–";
-  $("pSell").textContent = tot ? fmt(100 - share, 0) + " %" : "–";
-  $("sCvd").innerHTML = `<span class="${of.cvd >= 0 ? "up" : "down"}">${kfmt(of.cvd)}</span>`;
-  $("sD30").innerHTML = `<span class="${of.delta_30m >= 0 ? "up" : "down"}">${kfmt(of.delta_30m)}</span>`;
-  $("sVwap").innerHTML = of.vwap ? `${fmt(of.vwap, 0)} <small class="${last > of.vwap ? "up" : "down"}" title="${last > of.vwap ? "Kurs über VWAP" : "Kurs unter VWAP"}">${ARR(last > of.vwap)}</small>` : "–";
-  $("sPoc").textContent = fmt(of.vp?.poc, 0);
-
-  // Chart
-  const cs = d.nq?.candles || [];
-  const lastT = cs.length ? cs[cs.length - 1].time : null, closed = lastT && (Date.now() / 1000 - lastT) > 45 * 60;
-  $("mktBadge").className = "badge " + (closed ? "closed" : "live");
-  $("mktBadge").textContent = lastT ? (closed ? `Markt geschlossen, Stand ${dayTime(lastT)}` : "Markt offen") : "";
-  if (!cs.length) { overlay("Keine Kursdaten", "Die Datenquelle hat gerade nichts geliefert. Nächster Versuch beim nächsten Update (alle 15 Min)."); }
-  else $("overlay").classList.add("off");
+  D = d; paint.q = paint.vmax = null;
+  const age = (Date.now() - new Date(d.updated)) / 60000, cs = d.nq?.candles || [], lastT = cs.length ? cs[cs.length - 1].time : 0;
+  const closed = lastT && Date.now() / 1000 - lastT > 45 * 60;
+  $("stat").textContent = (closed ? "Markt zu · " : "") + `Update vor ${Math.round(age)} Min`;
+  $("led").className = "led" + (closed || age > 40 ? " off" : "");
+  $("mk").textContent = closed ? `Stand ${dhm(lastT)}` : "verzögert";
+  const nqm = (d.market || []).find(m => m.sym === "NQ=F");
+  $("px").textContent = fmt(d.nq?.last); $("chg").innerHTML = nqm ? pc(nqm.chg_pct) : "";
+  if (!cs.length) return ov("Keine Kursdaten", "Nächster Versuch beim nächsten Update.");
+  $("ov").classList.add("off");
+  line.setData(cs.map(c => ({time: c.time, value: c.close})));
   candle.setData(cs.map(c => ({time: c.time, open: c.open, high: c.high, low: c.low, close: c.close})));
-  deltaS.setData(cs.map(c => ({time: c.time, value: c.delta || 0, color: (c.delta || 0) >= 0 ? "rgba(46,196,182,.8)" : "rgba(242,95,92,.8)"})));
-  cvdS.setData(cs.map(c => ({time: c.time, value: c.cvd ?? 0})));
-  vwapS.setData(cs.filter(c => c.vwap != null).map(c => ({time: c.time, value: c.vwap})));
-  drawLevels();
-  showOHLC(null);
-  if (!render.zoomed && cs.length) { chart.timeScale().setVisibleLogicalRange({from: cs.length - Math.min(160, Math.round($("chart").clientWidth / 6)), to: cs.length + 12}); render.zoomed = true; }
-
-  // Bias
-  const b = d.bias;
-  if (b) {
-    $("biasLabel").textContent = {BULLISH: "Bullish", BEARISH: "Bearish", NEUTRAL: "Neutral"}[b.label] || b.label;
-    $("biasLabel").className = "bias " + (b.label === "BULLISH" ? "up" : b.label === "BEARISH" ? "down" : "muted");
-    $("biasScore").textContent = `Score ${b.score > 0 ? "+" : ""}${b.score}`;
-    $("biasPin").style.left = Math.max(2, Math.min(98, 50 + b.score * 9)) + "%";
-    $("reasons").innerHTML = b.reasons.map(r => `<div class="reason"><b class="${r.pts > 0 ? "up" : "down"}" aria-label="${r.pts > 0 ? "spricht für steigend" : "spricht für fallend"}">${ARR(r.pts > 0)}</b><span>${r.text}</span></div>`).join("");
-  }
-  // Regime
-  const pos = (d.gex?.total_bn ?? 0) > 0;
-  $("regPill").className = "pill " + (d.gex ? (pos ? "up" : "down") : "");
-  $("regPill").textContent = d.gex ? (pos ? "Eher Range-Tag (GEX positiv)" : "Eher Trend-Tag (GEX negativ)") : "–";
-  $("regText").innerHTML = d.gex ? (pos ? "Dealer bremsen Bewegungen. Level halten eher, Fades funktionieren besser." : "Dealer verstärken Bewegungen. Level brechen eher, Ausbrüche laufen weiter.") : "";
-
+  vw.setData(cs.filter(c => c.vwap).map(c => ({time: c.time, value: c.vwap})));
+  dS.setData(cs.map(c => ({time: c.time, value: c.delta || 0, color: (c.delta || 0) >= 0 ? "rgba(31,191,117,.8)" : "rgba(229,72,77,.8)"})));
+  cS.setData(cs.map(c => ({time: c.time, value: c.cvd ?? 0})));
+  drawLines(); ohlc(null);
+  if (!render.z) { chart.timeScale().setVisibleLogicalRange({from: cs.length - Math.min(150, Math.round($("chart").clientWidth / 7)), to: cs.length + 8}); render.z = true; }
+  ladder(d);
+  // Kontext
+  const of = d.orderflow || {}, b = d.bias, last = d.nq?.last, g = d.gex;
+  const tag = b ? {BULLISH: ["LONG", "up"], BEARISH: ["SHORT", "down"], NEUTRAL: ["NEUTRAL", "muted"]}[b.label] : null;
+  $("biasTag").innerHTML = tag ? `Bias <b class="${tag[1]}">${tag[0]}</b> ${b.score > 0 ? "+" : ""}${b.score}` : "";
+  const nx = (d.calendar || []).find(e => new Date(e.time) > Date.now() - 10 * 60000);
+  const kvs = [
+    ["GEX", g ? `<span class="${g.total_bn > 0 ? "up" : "down"}">${g.total_bn > 0 ? "POS · Range" : "NEG · Trend"}</span> ${fmt(g.total_bn, 1)} Mrd` : "–"],
+    ["VWAP", of.vwap ? `${fmt(of.vwap, 2)} <span class="${last > of.vwap ? "up" : "down"}">${last > of.vwap ? "über" : "unter"}</span>` : "–"],
+    ["POC / VA", of.vp ? `${fmt(of.vp.poc, 0)} · ${fmt(of.vp.val, 0)}–${fmt(of.vp.vah, 0)}` : "–"],
+    ["CVD", `<span class="${of.cvd >= 0 ? "up" : "down"}">${sg(of.cvd)}</span>`],
+    ["Δ 30m", `<span class="${of.delta_30m >= 0 ? "up" : "down"}">${sg(of.delta_30m)}</span>`],
+    ["News", nx ? `<span class="${nx.impact === "High" ? "down" : ""}">${ber(nx.time, {weekday: "short", hour: "2-digit", minute: "2-digit"})} ${nx.title}</span>` : "–"]];
+  $("kv").innerHTML = kvs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  $("why").innerHTML = (b?.reasons || []).map(r => `<div><span class="${r.pts > 0 ? "up" : "down"}">${r.pts > 0 ? "+" : "−"}</span><span>${r.text.replace(/ → .*/, "")}</span></div>`).join("");
   // Signale
+  const ab = of.absorption || [], cur = ab.filter(a => sessId(a.time) === of.session), list = (cur.length ? cur : ab.slice(-3)).slice(-6).reverse();
+  $("sigSub").textContent = cur.length ? "Session" : "älter";
   const sig = [];
-  if (of.divergence) sig.push({time: null, side: of.divergence, txt: of.divergence === "bear" ? "Delta-Divergenz: neues Hoch, Käufer fehlen" : "Delta-Divergenz: neues Tief, Verkäufer fehlen", tag: "DIV"});
-  const absAll = of.absorption || [], absCur = absAll.filter(a => sessId(a.time) === of.session);
-  const absShow = (absCur.length ? absCur : absAll.slice(-2)).slice(-5).reverse();
-  $("sigSub").textContent = absCur.length ? "aktuelle Session" : "keine in dieser Session · ältere:";
-  absShow.forEach(a => sig.push({time: a.time, side: a.side, tag: "ABS",
-    txt: `${a.side === "bull" ? "Verkäufer absorbiert" : "Käufer absorbiert"} @ ${fmt(a.price, 0)} · ${fmt(a.vol_x, 1)}× Vol`}));
-  $("signals").innerHTML = sig.map(s => `<div class="sig"><span class="tag ${s.side}">${s.tag}</span><span>${s.txt}</span><span class="muted num">${s.time ? dayTime(s.time) : "jetzt"}</span></div>`).join("") || '<span class="muted">Keine Signale</span>';
-
-  // Nächste News
-  const now = Date.now();
-  const evRow = (e, full) => {
-    const mins = (new Date(e.time) - now) / 60000;
-    const cd = mins < -15 ? "" : mins < 0 ? "läuft" : mins < 60 ? `in ${Math.round(mins)} Min` : mins < 1440 ? `in ${(mins / 60).toFixed(1).replace(".", ",")} Std` : berlin(e.time, {weekday: "short"});
-    return `<div class="ev ${e.impact}" ${mins < -30 ? 'style="opacity:.4"' : ""}><span class="num">${berlin(e.time, {hour: "2-digit", minute: "2-digit"})}</span><span><span class="t">${e.title}</span>${full ? `<br><small class="muted">${berlin(e.time, {weekday: "short", day: "2-digit", month: "2-digit"})} · Prognose ${e.forecast || "–"} · vorher ${e.previous || "–"}</small>` : ""}</span><span class="cd">${cd}</span></div>`;
-  };
-  $("calNext").innerHTML = (d.calendar || []).filter(e => new Date(e.time) > now - 15 * 60000).slice(0, 4).map(e => evRow(e)).join("") || '<span class="muted">Keine wichtigen Termine</span>';
-  $("cal").innerHTML = (d.calendar || []).map(e => evRow(e, true)).join("") || '<span class="muted">Noch keine Termine veröffentlicht</span>';
-
-  // Level nah
-  const lvAll = allLevels(d);
-  const above = lvAll.filter(l => l.price > last).sort((a, b) => a.price - b.price).slice(0, 3).reverse();
-  const below = lvAll.filter(l => l.price <= last).sort((a, b) => b.price - a.price).slice(0, 3);
-  const row = l => { const [name, col] = TAG[l.tag], dist = l.price - last;
-    return `<tr><td><span class="sw" style="background:${col};box-shadow:0 0 8px ${col}"></span>${name}</td><td class="num">${fmt(l.price, 0)}</td><td class="num ${dist >= 0 ? "up" : "down"}">${dist >= 0 ? "+" : ""}${fmt(dist, 0)}</td></tr>`; };
-  $("lvNear").innerHTML = above.map(row).join("") + `<tr class="now"><td colspan="3">NQ ${fmt(last, 0)}</td></tr>` + below.map(row).join("");
-
-  // News / Markt
-  $("news").innerHTML = (d.news || []).map(n => `<a href="${n.link}" target="_blank" rel="noopener"><small>${n.time ? berlin(n.time, {hour: "2-digit", minute: "2-digit"}) : ""} · ${n.source}</small>${n.title}</a>`).join("");
-  const tile = m => `<div class="tile"><span>${m.name}</span><b class="num">${fmt(m.last, m.last > 1000 ? 0 : 2)}</b>${pct(m.chg_pct)}</div>`;
-  $("market").innerHTML = (d.market || []).map(tile).join("");
-  $("mag7").innerHTML = (d.mag7 || []).map(tile).join("");
-
-  render3D(d);
+  if (of.divergence) sig.push(`<div class="sig"><span class="k ${of.divergence}">DIV</span><span>${of.divergence === "bear" ? "Hoch ohne Käufer" : "Tief ohne Verkäufer"}</span><span class="muted">jetzt</span></div>`);
+  list.forEach(a => sig.push(`<div class="sig"><span class="k ${a.side}">ABS</span><span>${a.side === "bull" ? "Bid hält" : "Offer hält"} ${fmt(a.price, 0)} · ${fmt(a.vol_x, 1)}×</span><span class="muted">${dhm(a.time)}</span></div>`));
+  $("sig").innerHTML = sig.join("") || '<div class="sig"><span></span><span class="muted">keine</span><span></span></div>';
+  // Andere Seiten
+  const row = m => `<tr><td>${m.name}</td><td class="n">${fmt(m.last, m.last > 1000 ? 0 : 2)}</td><td class="n">${pc(m.chg_pct)}</td></tr>`;
+  const th = `<tr><th>Markt</th><th class="n">Kurs</th><th class="n">Vortag</th></tr>`;
+  $("mkt").innerHTML = th + (d.market || []).map(row).join(""); $("mag").innerHTML = th + (d.mag7 || []).map(row).join("");
+  $("cal").innerHTML = `<tr><th>Zeit</th><th>Termin</th><th class="n">Prog.</th><th class="n">Vorher</th></tr>` + ((d.calendar || []).map(e => `<tr class="${e.impact === "High" ? "hi" : ""}"><td>${ber(e.time, {weekday: "short", hour: "2-digit", minute: "2-digit"})}</td><td>${e.title}</td><td class="n">${e.forecast || "–"}</td><td class="n">${e.previous || "–"}</td></tr>`).join("") || '<tr><td colspan="4" class="muted">Noch keine Termine veröffentlicht</td></tr>');
+  $("news").innerHTML = (d.news || []).map(n => `<tr><td class="muted" style="white-space:nowrap">${n.time ? ber(n.time, {hour: "2-digit", minute: "2-digit"}) : ""}</td><td><a href="${n.link}" target="_blank" rel="noopener">${n.title}</a></td></tr>`).join("");
+  three(d);
 }
 
-function render3D(d) {
+function three(d) {
   if (typeof Plotly === "undefined") return;
-  const ax = t => ({title: t, color: "#7f93a8", gridcolor: "#223246", backgroundcolor: "rgba(0,0,0,0)", showbackground: false});
-  const lay = s => ({paper_bgcolor: "rgba(0,0,0,0)", font: {family: "Barlow Semi Condensed", color: "#7f93a8"}, margin: {l: 0, r: 0, t: 0, b: 0}, scene: s});
+  const ax = t => ({title: t, color: "#8b929e", gridcolor: "#262b33", showbackground: false});
+  const lay = s => ({paper_bgcolor: "rgba(0,0,0,0)", font: {family: "Segoe UI, Roboto, Arial", color: "#8b929e", size: 11}, margin: {l: 0, r: 0, t: 0, b: 0}, scene: s});
+  const sc = (a, b, c) => ({xaxis: ax(a), yaxis: ax(b), zaxis: ax(c), camera: {eye: {x: 1.5, y: -1.6, z: .9}}, aspectmode: "manual", aspectratio: {x: 1.4, y: 1, z: .6}});
   const cfg = {displaylogo: false, responsive: true, displayModeBar: false};
-  const scene = (x, y, z) => ({xaxis: ax(x), yaxis: ax(y), zaxis: ax(z), camera: {eye: {x: 1.5, y: -1.6, z: .9}}, aspectmode: "manual", aspectratio: {x: 1.4, y: 1, z: .6}});
-  if (d.vol?.z?.length) Plotly.react("vol", [{type: "surface", x: d.vol.x, y: d.vol.y, z: d.vol.z, colorscale: "Jet", connectgaps: true,
-    colorbar: {title: "IV %", thickness: 8, len: .6}, hovertemplate: "Strike %{x} %<br>%{y} Tage<br>IV %{z:.1f} %<extra></extra>"}], lay(scene("Strike % vom Kurs", "Tage", "IV %")), cfg);
+  if (d.vol?.z?.length) Plotly.react("vol", [{type: "surface", x: d.vol.x, y: d.vol.y, z: d.vol.z, colorscale: "Jet", connectgaps: true, colorbar: {thickness: 8, len: .6}}], lay(sc("Strike %", "Tage", "IV %")), cfg);
   $("volToday").innerHTML = (d.vol_explain || []).map(t => `<p>${t}</p>`).join("");
   const L = d.gex?.landscape;
   if (L) {
-    Plotly.react("gexplot", [{type: "surface", x: L.x, y: L.y.map((_, i) => i), z: L.z, cmid: 0,
-      colorscale: [[0, "#f25f5c"], [.5, "#223246"], [1, "#2ec4b6"]], colorbar: {title: "Mrd $", thickness: 8, len: .6},
-      hovertemplate: "NQ %{x:.0f}<br>GEX %{z:.2f} Mrd $<extra></extra>"}],
-      lay(Object.assign(scene("NQ-Preis", "Laufzeit", "GEX"), {yaxis: Object.assign(ax("Laufzeit"), {tickvals: L.y.map((_, i) => i), ticktext: L.y})})), cfg);
-    const bi = Math.max(0, L.z.findIndex(r => r.some(v => Math.abs(v) > 1e-6))), z0 = L.z[bi], mx = Math.max(...z0), mn = Math.min(...z0), parts = [];
-    if (mx > 0) parts.push(`stärkster <span class="up">Magnet</span> bei <b>${fmt(L.x[z0.indexOf(mx)], 0)}</b> (Preis prallt eher ab)`);
-    if (mn < 0) parts.push(`stärkste <span class="down">Beschleunigungszone</span> bei <b>${fmt(L.x[z0.indexOf(mn)], 0)}</b> (Preis läuft eher schnell durch)`);
-    $("gexToday").innerHTML = `<p>Nächste Laufzeit (${L.y[bi]}): ${parts.join(", ") || "kaum Gamma"}.</p>` + (d.gex.explain || []).map(t => `<p>${t}</p>`).join("");
+    Plotly.react("gexplot", [{type: "surface", x: L.x, y: L.y.map((_, i) => i), z: L.z, cmid: 0, colorscale: [[0, "#e5484d"], [.5, "#262b33"], [1, "#1fbf75"]], colorbar: {thickness: 8, len: .6}}],
+      lay(Object.assign(sc("NQ", "Laufzeit", "GEX"), {yaxis: Object.assign(ax("Laufzeit"), {tickvals: L.y.map((_, i) => i), ticktext: L.y})})), cfg);
+    const bi = Math.max(0, L.z.findIndex(r => r.some(v => Math.abs(v) > 1e-6))), z = L.z[bi], mx = Math.max(...z), mn = Math.min(...z), p = [];
+    if (mx > 0) p.push(`Magnet <b>${fmt(L.x[z.indexOf(mx)], 0)}</b>`); if (mn < 0) p.push(`Beschleuniger <b>${fmt(L.x[z.indexOf(mn)], 0)}</b>`);
+    $("gexToday").innerHTML = `<p>Nächste Laufzeit (${L.y[bi]}): ${p.join(", ") || "kaum Gamma"}.</p>`;
   }
 }
 
+function ov(t, x, retry) { const o = $("ov"); o.classList.remove("off"); o.innerHTML = `<div><b>${t}</b>${x}${retry ? '<br><button onclick="load()">Erneut versuchen</button>' : ""}</div>`; }
 async function load() {
-  try {
-    const r = await fetch("data/latest.json?t=" + Date.now(), {cache: "no-store"});
-    render(await r.json());
-  } catch (e) {
-    console.error(e); $("stamp").textContent = "Keine Verbindung"; $("dot").className = "dot old";
-    if (!DATA) overlay("Daten konnten nicht geladen werden", "Prüf deine Internetverbindung. Die Seite versucht es alle 5 Min von selbst erneut.", true);
-  }
+  try { const r = await fetch("data/latest.json?t=" + Date.now(), {cache: "no-store"}); render(await r.json()); }
+  catch (e) { console.error(e); $("stat").textContent = "keine Verbindung"; $("led").className = "led off"; if (!D) ov("Daten nicht erreichbar", "Prüf die Verbindung. Neuer Versuch alle 5 Min.", true); }
 }
-function overlay(title, text, retry) {
-  const o = $("overlay"); o.classList.remove("off");
-  o.innerHTML = `<div><b>${title}</b>${text}${retry ? '<br><button onclick="load()">Jetzt erneut versuchen</button>' : ""}</div>`;
-}
-document.querySelectorAll(".info").forEach(b => b.onclick = e => {
-  e.stopPropagation();
-  const p = $("pop"), on = b.classList.contains("on");
-  document.querySelectorAll(".info").forEach(x => x.classList.remove("on"));
-  if (on) { p.classList.remove("on"); return; }
-  b.classList.add("on"); p.innerHTML = INFO[b.dataset.i];
-  const wr = b.closest(".chartwrap").getBoundingClientRect(), br = b.getBoundingClientRect();
-  const below = br.bottom - wr.top < wr.height * .55;
-  p.style.top = below ? (br.bottom - wr.top + 6) + "px" : "auto";
-  p.style.bottom = below ? "auto" : (wr.bottom - br.top + 6) + "px";
-  p.classList.add("on");
-});
-document.addEventListener("click", () => { $("pop").classList.remove("on"); document.querySelectorAll(".info").forEach(x => x.classList.remove("on")); });
 
-const PAGES = [["cockpit", "Cockpit", "◉"], ["optionen", "Optionen", "◭"], ["news", "News", "≡"], ["markt", "Markt", "◫"]];
-$("topnav").innerHTML = PAGES.map(([id, n]) => `<a href="#${id}" data-p="${id}">${n}</a>`).join("");
-$("botnav").innerHTML = PAGES.map(([id, n, i]) => `<a href="#${id}" data-p="${id}"><b>${i}</b>${n}</a>`).join("");
+const P = [["cockpit", "Cockpit"], ["optionen", "Optionen"], ["news", "News"], ["markt", "Markt"]];
+$("tabs").innerHTML = $("mnav").innerHTML = P.map(([i, n]) => `<a href="#${i}" data-p="${i}">${n}</a>`).join("");
 function route() {
-  const id = (location.hash || "#cockpit").slice(1), p = PAGES.some(x => x[0] === id) ? id : "cockpit";
-  document.querySelectorAll(".page").forEach(el => el.classList.toggle("on", el.id === "p-" + p));
+  const id = (location.hash || "#cockpit").slice(1), p = P.some(x => x[0] === id) ? id : "cockpit";
+  document.querySelectorAll(".page").forEach(e => e.classList.toggle("on", e.id === "p-" + p));
   document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.p === p));
-  if (p === "optionen" && typeof Plotly !== "undefined") setTimeout(() => ["vol", "gexplot"].forEach(id => $(id).data && Plotly.Plots.resize(id)), 40);
+  if (p === "optionen" && typeof Plotly !== "undefined") setTimeout(() => ["vol", "gexplot"].forEach(i => $(i).data && Plotly.Plots.resize(i)), 40);
 }
 addEventListener("hashchange", route);
-document.querySelectorAll(".chip").forEach(c => c.onclick = () => { show[c.dataset.g] = !show[c.dataset.g]; c.classList.toggle("on", show[c.dataset.g]); drawLevels(); });
-$("copyBtn").onclick = async () => {
-  try { await navigator.clipboard.writeText(DATA.gex_string); $("copyBtn").textContent = "Kopiert. In TradingView einfügen"; }
-  catch { prompt("Kopieren:", DATA.gex_string); }
-  setTimeout(() => $("copyBtn").textContent = "GEX-Level für TradingView kopieren", 2500);
-};
-route(); initChart(); load(); setInterval(load, 5 * 60 * 1000);
-addEventListener("resize", () => DATA && drawLevels());
+document.querySelectorAll(".tg").forEach(b => b.onclick = () => {
+  const k = b.dataset.k; on[k] = !on[k]; b.classList.toggle("on", on[k]);
+  if (k === "candle") { candle.applyOptions({visible: on.candle, lastValueVisible: on.candle, priceLineVisible: on.candle}); line.applyOptions({visible: !on.candle, lastValueVisible: !on.candle}); }
+  if (D) drawLines();
+});
+$("cp").onclick = async () => { try { await navigator.clipboard.writeText(D.gex_string); $("cp").textContent = "Kopiert"; } catch { prompt("Kopieren:", D.gex_string); } setTimeout(() => $("cp").textContent = "GEX-String kopieren", 2000); };
+addEventListener("resize", () => D && drawLines());
+route(); init(); load(); setInterval(load, 5 * 60 * 1000);
 </script>
 </body>
 </html>

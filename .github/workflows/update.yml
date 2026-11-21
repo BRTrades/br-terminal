@@ -2,8 +2,10 @@ name: Daten-Update
 
 on:
   schedule:
-    - cron: "*/15 * * * 1-5"   # Mo–Fr alle 15 Min
-    - cron: "0 */3 * * 0,6"    # Wochenende alle 3 Std (Kalender/News)
+    - cron: "*/5 13-20 * * 1-5"         # Mo–Fr US-Session (14–22 Uhr MEZ) alle 5 Min
+    - cron: "*/15 0-12,21-23 * * 1-5"   # Mo–Fr sonst alle 15 Min
+    - cron: "0 */3 * * 6"      # Samstag alle 3 Std (Kalender/News)
+    - cron: "*/15 22-23 * * 0" # Sonntag ab Futures-Öffnung (23 Uhr MEZ) alle 15 Min
     - cron: "5 14 * * 1-5"     # Telegram: 15:05 MEZ (vor NY-Open)
   workflow_dispatch:
     inputs:

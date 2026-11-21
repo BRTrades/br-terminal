@@ -13,6 +13,7 @@ Quellen (alle kostenlos):
 """
 import datetime as dt
 import email.utils
+import http.cookiejar
 import json
 import math
 import os
@@ -32,9 +33,13 @@ PAT = re.compile(r"^([A-Z]+)(\d{6})([CP])(\d{8})$")
 NOW = dt.datetime.now(dt.timezone.utc)
 
 
-def get(url, as_json=True):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=30) as r:
+_JAR = http.cookiejar.CookieJar()
+_OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_JAR))
+
+
+def get(url, as_json=True, headers=None):
+    req = urllib.request.Request(url, headers={**UA, **(headers or {})})
+    with _OPENER.open(req, timeout=30) as r:
         raw = r.read()
     return json.loads(raw) if as_json else raw
 
@@ -49,7 +54,58 @@ def safe(fn, default=None, label=""):
 
 # ───────────────────────── Optionen / GEX ─────────────────────────
 def load_options(sym):
-    d = get(f"https://cdn.cboe.com/api/global/delayed_quotes/options/_{sym}.json")["data"]
+    """Erst CBOE, bei Block (403 auf Cloud-Servern) Yahoo als Ausweichquelle."""
+    try:
+        return load_options_cboe(sym)
+    except Exception as e:
+        print(f"[info] CBOE {sym} nicht erreichbar ({e}) -> Yahoo")
+        return load_options_yahoo(sym)
+
+
+_CRUMB = None
+
+
+def yahoo_crumb():
+    global _CRUMB
+    if _CRUMB is None:
+        try:
+            get("https://fc.yahoo.com", as_json=False)
+        except Exception:
+            pass  # setzt trotzdem das Cookie
+        _CRUMB = get("https://query2.finance.yahoo.com/v1/test/getcrumb", as_json=False).decode().strip()
+    return _CRUMB
+
+
+def load_options_yahoo(sym, max_days=120):
+    base = f"https://query2.finance.yahoo.com/v7/finance/options/%5E{sym}"
+    crumb = urllib.parse.quote(yahoo_crumb())
+    first = get(f"{base}?crumb={crumb}")["optionChain"]["result"][0]
+    spot = float(first["quote"]["regularMarketPrice"])
+    rows = []
+    for ts in first["expirationDates"]:
+        exp = dt.datetime.fromtimestamp(ts, dt.timezone.utc).replace(hour=21)
+        days = (exp - NOW).total_seconds() / 86400
+        if days <= 0:
+            continue
+        if days > max_days:
+            break
+        res = get(f"{base}?date={ts}&crumb={crumb}")["optionChain"]["result"][0]["options"][0]
+        for cp, lst in (("C", res.get("calls", [])), ("P", res.get("puts", []))):
+            for o in lst:
+                iv = float(o.get("impliedVolatility") or 0)
+                if iv <= 0.01 or iv > 3:
+                    continue
+                rows.append({"K": float(o["strike"]), "cp": cp, "T": max(days / 365, 1 / (365 * 24)),
+                             "days": days, "iv": iv, "oi": float(o.get("openInterest") or 0)})
+    if not rows:
+        raise RuntimeError("Yahoo lieferte keine Optionen")
+    return spot, rows
+
+
+def load_options_cboe(sym):
+    d = get(f"https://cdn.cboe.com/api/global/delayed_quotes/options/_{sym}.json",
+            headers={"Origin": "https://www.cboe.com", "Referer": "https://www.cboe.com/",
+                     "Accept": "application/json, text/plain, */*"})["data"]
     spot = float(d.get("current_price") or d.get("close"))
     rows = []
     for o in d["options"]:
@@ -240,6 +296,7 @@ def session_levels(candles):
 # ───────────────────────── News ─────────────────────────
 def calendar():
     data = get("https://nfs.faireconomy.media/ff_calendar_thisweek.json")
+    data += safe(lambda: get("https://nfs.faireconomy.media/ff_calendar_nextweek.json"), [], "Kalender nächste Woche")
     today = NOW.astimezone(BER).date()
     out = []
     for e in data:

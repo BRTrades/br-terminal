@@ -252,8 +252,8 @@ def quote(sym, name):
     return {"sym": sym, "name": name, "last": last, "chg_pct": (last / prev - 1) * 100 if prev else 0}
 
 
-def nq_candles():
-    r = yahoo("NQ=F", "5m", "5d")
+def raw_candles(interval, rng):
+    r = yahoo("NQ=F", interval, rng)
     q = r["indicators"]["quote"][0]
     out = []
     for i, t in enumerate(r["timestamp"]):
@@ -262,6 +262,120 @@ def nq_candles():
             continue
         out.append({"time": t, "open": o, "high": h, "low": l, "close": c, "volume": v or 0})
     return out
+
+
+def session_id(t):
+    """Futures-Session startet 18:00 New York -> ID = Handelstag."""
+    x = dt.datetime.fromtimestamp(t, ET_TZ)
+    return (x + dt.timedelta(hours=6)).date().isoformat()
+
+
+def nq_candles():
+    """5-Min-Kerzen mit geschätztem Delta (Tick-Regel auf 1-Min-Daten)."""
+    try:
+        m1 = raw_candles("1m", "5d")
+    except Exception as e:
+        print(f"[warn] 1m: {e} -> nur 5m")
+        m1 = []
+    if len(m1) < 100:
+        c5 = raw_candles("5m", "5d")
+        for c in c5:
+            rng_ = c["high"] - c["low"]
+            c["delta"] = c["volume"] * (2 * (c["close"] - c["low"]) / rng_ - 1) if rng_ > 0 else 0
+        return c5, []
+    prev, last_sign = None, 0
+    for c in m1:
+        ref = prev if prev is not None else c["open"]
+        sign = 1 if c["close"] > ref else -1 if c["close"] < ref else (1 if c["close"] > c["open"] else -1 if c["close"] < c["open"] else last_sign)
+        c["delta"] = c["volume"] * sign
+        last_sign, prev = sign, c["close"]
+    bars = {}
+    for c in m1:
+        k = c["time"] - c["time"] % 300
+        b = bars.get(k)
+        if not b:
+            bars[k] = dict(c, time=k)
+        else:
+            b["high"] = max(b["high"], c["high"]); b["low"] = min(b["low"], c["low"])
+            b["close"] = c["close"]; b["volume"] += c["volume"]; b["delta"] += c["delta"]
+    return [bars[k] for k in sorted(bars)], m1
+
+
+def orderflow(c5, m1, tick=5.0):
+    """Session-CVD, VWAP, Volume Profile (POC/VAH/VAL), Absorption."""
+    if not c5:
+        return {}
+    cur = session_id(c5[-1]["time"])
+    sessions = sorted({session_id(c["time"]) for c in c5})
+    prev_s = sessions[-2] if len(sessions) > 1 else None
+    cvd, vw_pv, vw_v, sid = 0.0, 0.0, 0.0, None
+    for c in c5:
+        s_ = session_id(c["time"])
+        if s_ != sid:
+            cvd, vw_pv, vw_v, sid = 0.0, 0.0, 0.0, s_
+        cvd += c["delta"]
+        vw_pv += (c["high"] + c["low"] + c["close"]) / 3 * c["volume"]; vw_v += c["volume"]
+        c["cvd"] = cvd
+        c["vwap"] = vw_pv / vw_v if vw_v else c["close"]
+
+    def profile(sess):
+        src = [c for c in (m1 or c5) if session_id(c["time"]) == sess]
+        bins = {}
+        for c in src:
+            lo, hi = math.floor(c["low"] / tick), math.floor(c["high"] / tick)
+            n = hi - lo + 1
+            for b in range(lo, hi + 1):
+                bins[b] = bins.get(b, 0) + c["volume"] / n
+        if not bins:
+            return None
+        tot = sum(bins.values())
+        poc = max(bins, key=bins.get)
+        keys = sorted(bins)
+        i = j = keys.index(poc)
+        acc = bins[poc]
+        while acc < 0.7 * tot and (i > 0 or j < len(keys) - 1):
+            up = bins[keys[j + 1]] if j < len(keys) - 1 else -1
+            dn = bins[keys[i - 1]] if i > 0 else -1
+            if up >= dn:
+                j += 1; acc += up
+            else:
+                i -= 1; acc += dn
+        return {"bins": [[round(k * tick + tick / 2, 2), round(v)] for k, v in sorted(bins.items())],
+                "poc": poc * tick + tick / 2, "vah": keys[j] * tick + tick, "val": keys[i] * tick}
+
+    vp = profile(cur)
+    pvp = profile(prev_s) if prev_s else None
+    # Absorption: viel Volumen, einseitiges Delta, aber Preis schließt dagegen
+    absorb = []
+    for i, c in enumerate(c5):
+        if i < 20:
+            continue
+        avg = sum(x["volume"] for x in c5[i - 20:i]) / 20
+        rng_ = c["high"] - c["low"]
+        if not avg or not c["volume"] or rng_ <= 0:
+            continue
+        dr = c["delta"] / c["volume"]
+        pos = (c["close"] - c["low"]) / rng_
+        if c["volume"] > 1.8 * avg and dr <= -0.25 and pos >= 0.5:
+            absorb.append({"time": c["time"], "side": "bull", "price": c["low"], "vol_x": round(c["volume"] / avg, 1)})
+        elif c["volume"] > 1.8 * avg and dr >= 0.25 and pos <= 0.5:
+            absorb.append({"time": c["time"], "side": "bear", "price": c["high"], "vol_x": round(c["volume"] / avg, 1)})
+    sess = [c for c in c5 if session_id(c["time"]) == cur]
+    buy = sum(max(c["delta"], 0) for c in sess); sell = -sum(min(c["delta"], 0) for c in sess)
+    last6 = sum(c["delta"] for c in sess[-6:])
+    # Delta-Divergenz: Preis neues Session-Hoch/-Tief, CVD nicht
+    div = None
+    if len(sess) > 12:
+        hi_i = max(range(len(sess)), key=lambda k: sess[k]["high"])
+        lo_i = min(range(len(sess)), key=lambda k: sess[k]["low"])
+        if hi_i >= len(sess) - 3 and sess[-1]["cvd"] < max(c["cvd"] for c in sess[:-3]):
+            div = "bear"
+        elif lo_i >= len(sess) - 3 and sess[-1]["cvd"] > min(c["cvd"] for c in sess[:-3]):
+            div = "bull"
+    return {"session": cur, "cvd": sess[-1]["cvd"] if sess else 0, "buy_vol": buy, "sell_vol": sell,
+            "delta_30m": last6, "vwap": sess[-1]["vwap"] if sess else None, "vp": vp,
+            "prev_vp": {k: pvp[k] for k in ("poc", "vah", "val")} if pvp else None,
+            "absorption": absorb[-25:], "divergence": div}
 
 
 def session_levels(candles):
@@ -335,7 +449,7 @@ def headlines():
 
 
 # ───────────────────────── Bias ─────────────────────────
-def daily_bias(nq_last, lv, gex_nq, market, mag7):
+def daily_bias(nq_last, lv, gex_nq, market, mag7, of=None):
     score, reasons = 0, []
 
     def add(pts, txt):
@@ -375,6 +489,18 @@ def daily_bias(nq_last, lv, gex_nq, market, mag7):
             add(1, f"{up}/7 Mag-7-Aktien im Plus → breite Stärke")
         elif up <= 2:
             add(-1, f"Nur {up}/7 Mag-7-Aktien im Plus → Schwäche in den Schwergewichten")
+    if of and of.get("buy_vol") is not None:
+        tot = of["buy_vol"] + of["sell_vol"]
+        if tot > 0:
+            share = of["buy_vol"] / tot
+            if share > 0.53:
+                add(1, f"Session-Delta positiv ({share * 100:.0f} % Käufe) → aggressive Käufer dominieren")
+            elif share < 0.47:
+                add(-1, f"Session-Delta negativ ({share * 100:.0f} % Käufe) → aggressive Verkäufer dominieren")
+    if of and of.get("divergence") == "bear":
+        add(-1, "Delta-Divergenz: neues Hoch ohne Käufer-Bestätigung → Erschöpfung")
+    elif of and of.get("divergence") == "bull":
+        add(1, "Delta-Divergenz: neues Tief ohne Verkäufer-Bestätigung → Erschöpfung")
     label = "BULLISH" if score >= 2 else "BEARISH" if score <= -2 else "NEUTRAL"
     return {"label": label, "score": score, "reasons": reasons}
 
@@ -420,10 +546,15 @@ def explain_gex(g, ratio):
 def main():
     data = {"updated": NOW.isoformat()}
 
-    candles = safe(nq_candles, [], "NQ")
+    candles, m1 = safe(nq_candles, ([], []), "NQ")
     nq_last = candles[-1]["close"] if candles else None
-    data["nq"] = {"candles": candles[-500:], "last": nq_last}
+    of = safe(lambda: orderflow(candles, m1), {}, "Orderflow")
+    data["orderflow"] = of
+    data["nq"] = {"candles": [{k: (round(v, 2) if isinstance(v, float) else v) for k, v in c.items()} for c in candles[-600:]],
+                  "last": nq_last}
     lv = safe(lambda: session_levels(candles), {}, "Session-Level") if candles else {}
+    if of.get("prev_vp"):
+        lv.update({"pPOC": of["prev_vp"]["poc"], "pVAH": of["prev_vp"]["vah"], "pVAL": of["prev_vp"]["val"]})
 
     market = [x for x in (safe(lambda s=s, n=n: quote(s, n), None, s) for s, n in [
         ("NQ=F", "Nasdaq Fut."), ("ES=F", "S&P Fut."), ("^VIX", "VIX"), ("^TNX", "US 10J Zins"),
@@ -454,7 +585,7 @@ def main():
     data["session"] = lv
     data["calendar"] = safe(calendar, [], "Kalender")
     data["news"] = safe(headlines, [], "News")
-    data["bias"] = daily_bias(nq_last, lv, gex_nq, market, mag7) if nq_last else None
+    data["bias"] = daily_bias(nq_last, lv, gex_nq, market, mag7, of) if nq_last else None
 
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")

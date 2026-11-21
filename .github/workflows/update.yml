@@ -1,0 +1,47 @@
+name: Daten-Update
+
+on:
+  schedule:
+    - cron: "*/15 * * * 1-5"   # Mo–Fr alle 15 Min
+    - cron: "0 */3 * * 0,6"    # Wochenende alle 3 Std (Kalender/News)
+    - cron: "5 14 * * 1-5"     # Telegram: 15:05 MEZ (vor NY-Open)
+  workflow_dispatch:
+    inputs:
+      telegram:
+        description: "Telegram-Nachricht mitschicken?"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daten
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Daten holen
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT: ${{ secrets.TG_CHAT }}
+        run: |
+          if [ "${{ github.event.schedule }}" = "5 14 * * 1-5" ] || [ "${{ inputs.telegram }}" = "true" ]; then
+            python fetch_data.py --telegram
+          else
+            python fetch_data.py
+          fi
+      - name: Speichern
+        run: |
+          git config user.name "br-terminal-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/latest.json
+          git commit -m "Daten $(date -u +%H:%M)" || exit 0
+          git pull --rebase
+          git push

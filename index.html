@@ -71,7 +71,7 @@ a,button{cursor:pointer}
 
 /* Rechte Spalte */
 .col{display:grid;grid-template-rows:1fr auto auto;gap:1px;background:var(--line);min-height:0}
-.ladder{flex:1;overflow:auto;min-height:260px;scrollbar-width:thin;scrollbar-color:#323843 transparent}
+.ladder{flex:1;overflow:auto;position:relative;min-height:260px;scrollbar-width:thin;scrollbar-color:#323843 transparent}
 .lr{display:grid;grid-template-columns:1fr 62px 1fr 34px;height:17px;align-items:center;font-size:11px;border-bottom:1px solid #191c22}
 .lr span{position:relative;height:100%;display:flex;align-items:center;padding:0 4px}
 .lr .s{justify-content:flex-end}
@@ -339,7 +339,8 @@ function ladder(d) {
       <span class="b"><i style="width:${b / mx * 100}%"></i><em>${b ? kf(b) : ""}</em></span><span class="t">${(tags[k] || []).join(" ")}</span></div>`;
   }).join("");
   $("ladder").innerHTML = `<div class="lh"><span>Verkauf</span><span>Preis</span><span>Kauf</span><span></span></div>` + rows;
-  const cur = $("lcur"); if (cur && !ladder.done) { cur.scrollIntoView({block: "center"}); ladder.done = true; }
+  const cur = $("lcur"), box = $("ladder");
+  if (cur && !ladder.done) { box.scrollTop = cur.offsetTop - box.clientHeight / 2; ladder.done = true; }
   const tb = of.buy_vol || 0, ts = of.sell_vol || 0, sh = tb + ts ? tb / (tb + ts) * 100 : 50;
   $("pr").style.width = sh + "%";
   $("ladSum").innerHTML = `<span class="up">${fmt(sh, 0)}%</span> / <span class="down">${fmt(100 - sh, 0)}%</span>`;

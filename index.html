@@ -74,15 +74,32 @@ nav.tabs a.on{color:#000;background:var(--acc);box-shadow:var(--glow-acc)}
 .price small{display:block;font-size:12px;color:var(--muted);letter-spacing:.1em}
 .st{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .st > span{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
-.st b{font-size:16px;font-weight:600}
+.st b{font-size:16px;font-weight:600;white-space:nowrap}
+@media(max-width:800px){.price .badge{display:block;margin:4px 0 0;width:max-content}}
 .bsbar{height:5px;border-radius:3px;background:var(--down);margin-top:6px;overflow:hidden}
 .bsbar i{display:block;height:100%;background:var(--up);box-shadow:var(--glow-up)}
 /* Chart */
-.chartwrap{position:relative;height:620px}
-@media(max-width:800px){.chartwrap{height:72vh}}
-#chart{position:absolute;inset:0}
-#vp{position:absolute;inset:0;pointer-events:none}
-.lab{position:absolute;left:12px;font-size:10px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;pointer-events:none;z-index:3}
+.chartwrap{position:relative;height:660px;display:grid;grid-template-rows:62% 19% 19%}
+@media(max-width:800px){.chartwrap{height:78vh}}
+.pane{position:relative;min-height:0}
+.pane+.pane{border-top:1px solid var(--line)}
+#chart,#dchart,#cchart{position:absolute;inset:0}
+#vp{position:absolute;inset:0;pointer-events:none;z-index:2}
+.lab{position:absolute;left:12px;top:8px;font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;z-index:4;display:flex;align-items:center;gap:6px}
+.info{width:16px;height:16px;border-radius:50%;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);font:600 10px "Space Grotesk";cursor:pointer;padding:0;line-height:14px}
+.info:hover,.info.on{color:#000;background:var(--acc);border-color:var(--acc)}
+.pop{position:absolute;z-index:10;left:12px;max-width:340px;background:rgba(14,17,27,.96);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.5);display:none}
+.pop.on{display:block}
+.overlay{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:rgba(5,7,13,.75);backdrop-filter:blur(4px);text-align:center;color:var(--muted);font-size:13px;line-height:1.5}
+.overlay.off{display:none}
+.overlay b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+.overlay button{margin-top:10px;border:1px solid var(--acc);background:transparent;color:var(--acc);border-radius:8px;padding:6px 14px;font:inherit;cursor:pointer}
+.spin{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--acc);margin:0 auto 10px;animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.badge{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;vertical-align:middle}
+.badge.closed{background:rgba(255,194,75,.14);color:var(--warn);border:1px solid rgba(255,194,75,.35)}
+.badge.live{background:rgba(34,227,155,.12);color:var(--up);border:1px solid rgba(34,227,155,.3)}
+.unit{font-size:11px;color:var(--muted);font-weight:400;margin-left:4px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--muted);font:inherit;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;transition:.2s}
 .chip.on{color:var(--text);border-color:var(--acc);box-shadow:inset 0 0 12px rgba(255,138,31,.15)}
@@ -154,10 +171,10 @@ nav.bottom a.on{color:#000;background:var(--acc)}
 <section class="grid cockpit">
   <div class="panel">
     <div class="stats">
-      <div class="price"><small>NQ · 5 MIN</small><b class="num" id="nqLast">–</b> <span id="nqChg" class="num"></span></div>
+      <div class="price"><small>NQ · 5 MIN <span class="badge" id="mktBadge"></span></small><b class="num" id="nqLast">–</b> <span id="nqChg" class="num"></span></div>
       <div class="st"><span>Session-Delta</span><b class="num" id="sDelta">–</b><div class="bsbar"><i id="bsBar" style="width:50%"></i></div></div>
-      <div class="st"><span>CVD</span><b class="num" id="sCvd">–</b></div>
-      <div class="st"><span>Δ letzte 30 Min</span><b class="num" id="sD30">–</b></div>
+      <div class="st"><span>CVD · Kontrakte</span><b class="num" id="sCvd">–</b></div>
+      <div class="st"><span>Δ 30 Min · Kontr.</span><b class="num" id="sD30">–</b></div>
       <div class="st"><span>VWAP</span><b class="num" id="sVwap">–</b></div>
       <div class="st"><span>POC</span><b class="num" id="sPoc">–</b></div>
     </div>
@@ -168,18 +185,17 @@ nav.bottom a.on{color:#000;background:var(--acc)}
         <button class="chip on" data-g="sess">Vortag</button>
         <button class="chip on" data-g="vwap">VWAP</button>
         <button class="chip on" data-g="abs">Absorption</button>
+        <button class="chip" data-g="more">+ Mehr Level</button>
       </div>
       <small>Daten ~10–15 Min verzögert</small>
     </div>
     <div class="chartwrap">
-      <div id="chart"></div><canvas id="vp"></canvas>
-      <div class="lab" id="labDelta">Delta</div><div class="lab" id="labCvd">CVD</div>
-    </div>
-    <div class="howto">
-      <div><b><i style="background:var(--up)"></i>Delta</b>Grün = mehr aggressive Käufe, rot = mehr Verkäufe in der Kerze.</div>
-      <div><b><i style="background:var(--cyan)"></i>CVD</b>Aufsummiertes Delta. Steigt der Preis, aber CVD nicht → Käufer werden müde.</div>
-      <div><b><i style="background:var(--violet)"></i>Volume Profile</b>Wo am meisten gehandelt wurde. POC = Magnet, Value Area = fairer Bereich.</div>
-      <div><b><i style="background:var(--warn)"></i>Absorption ●</b>Viel Volumen, Preis bewegt sich trotzdem nicht → große Limit-Orders halten.</div>
+      <div class="pane"><div id="chart"></div><canvas id="vp"></canvas>
+        <div class="lab">Preis · Volume Profile <button class="info" data-i="vp" aria-label="Erklärung Volume Profile">i</button> <button class="info" data-i="abs" aria-label="Erklärung Absorption">●</button></div></div>
+      <div class="pane"><div id="dchart"></div><div class="lab">Delta · Kontrakte <button class="info" data-i="delta" aria-label="Erklärung Delta">i</button></div></div>
+      <div class="pane"><div id="cchart"></div><div class="lab">CVD · Session <button class="info" data-i="cvd" aria-label="Erklärung CVD">i</button></div></div>
+      <div class="pop" id="pop"></div>
+      <div class="overlay" id="overlay"><div><div class="spin"></div><b>Lade Marktdaten …</b>einen Moment</div></div>
     </div>
   </div>
 
@@ -188,7 +204,7 @@ nav.bottom a.on{color:#000;background:var(--acc)}
       <div class="pb"><div class="bias" id="biasLabel">–</div><div class="meter"><i id="biasPin" style="left:50%"></i></div><div id="reasons"></div></div></div>
     <div class="panel"><div class="ph"><h2>Regime</h2><small>Optionen</small></div>
       <div class="pb"><span class="pill" id="regPill">–</span><div class="small" id="regText"></div></div></div>
-    <div class="panel"><div class="ph"><h2>Orderflow-Signale</h2><small>letzte</small></div>
+    <div class="panel"><div class="ph"><h2>Orderflow-Signale</h2><small id="sigSub">aktuelle Session</small></div>
       <div class="pb" id="signals"></div></div>
     <div class="panel"><div class="ph"><h2>Nächste News</h2><small>USD · MEZ</small></div>
       <div class="pb" id="calNext"></div></div>
@@ -238,7 +254,7 @@ nav.bottom a.on{color:#000;background:var(--acc)}
 </section>
 </div>
 
-<footer>Kostenlose, verzögerte Daten: Kurse Yahoo (~10–15 Min), Optionen CBOE/Yahoo, Kalender ForexFactory, News CNBC/MarketWatch. Delta = Schätzung aus 1-Min-Daten (Tick-Regel), kein echtes Bid/Ask. Kein Signal-System. Update alle 15 Min.</footer>
+<footer>Kostenlose, verzögerte Daten: Kurse Yahoo (~10–15 Min), Optionen CBOE/Yahoo, Kalender ForexFactory, News CNBC/MarketWatch. Delta = Schätzung aus 1-Min-Daten (Tick-Regel), kein echtes Bid/Ask. Kein Signal-System. Update alle 15 Min. Charts: <a href="https://www.tradingview.com/lightweight-charts/" style="color:inherit">TradingView Lightweight Charts</a>.</footer>
 <nav class="bottom" id="botnav"></nav>
 
 <script>
@@ -247,46 +263,60 @@ const fmt = (v, d = 2) => v == null || isNaN(v) ? "–" : Number(v).toLocaleStri
 const kfmt = v => v == null ? "–" : (v >= 0 ? "+" : "") + (Math.abs(v) >= 1e6 ? fmt(v / 1e6, 2) + " M" : Math.abs(v) >= 1e3 ? fmt(v / 1e3, 1) + " K" : fmt(v, 0));
 const pct = v => v == null ? "" : `<i class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : ""}${fmt(v)} %</i>`;
 const berlin = (iso, opt) => new Date(iso).toLocaleString("de-DE", Object.assign({timeZone: "Europe/Berlin"}, opt));
+// [Name, Farbe, Linienstärke, Gruppe, Kern-Level?]
 const TAG = {
-  CW: ["Call Wall", "#22e39b", 2, "gex"], PW: ["Put Wall", "#ff4d6d", 2, "gex"], ZG: ["Zero Gamma", "#ffc24b", 2, "gex"],
-  "G+": ["GEX +", "#6fd6b0", 1, "gex"], "G-": ["GEX −", "#e58a9b", 1, "gex"],
-  POC: ["POC", "#a78bfa", 2, "vp"], VAH: ["VAH", "#a78bfa", 1, "vp"], VAL: ["VAL", "#a78bfa", 1, "vp"],
-  pPOC: ["Vortag POC", "#7c6bd6", 1, "sess"], pVAH: ["Vortag VAH", "#5d5491", 1, "sess"], pVAL: ["Vortag VAL", "#5d5491", 1, "sess"],
-  PDH: ["Vortag High", "#9aa7ff", 1, "sess"], PDL: ["Vortag Low", "#9aa7ff", 1, "sess"], PDC: ["Vortag Close", "#6b7290", 1, "sess"],
-  pVWAP: ["Vortag VWAP", "#d9dbe4", 1, "sess"], ONH: ["Overnight High", "#3cc8ff", 1, "sess"], ONL: ["Overnight Low", "#3cc8ff", 1, "sess"]
+  CW: ["Call Wall", "#22e39b", 2, "gex", 1], PW: ["Put Wall", "#ff4d6d", 2, "gex", 1], ZG: ["Zero Gamma", "#ffc24b", 2, "gex", 1],
+  "G+": ["GEX +", "#6fd6b0", 1, "gex", 0], "G-": ["GEX −", "#e58a9b", 1, "gex", 0],
+  POC: ["POC", "#ff8a1f", 2, "vp", 1], VAH: ["VAH", "#a78bfa", 1, "vp", 1], VAL: ["VAL", "#a78bfa", 1, "vp", 1],
+  pPOC: ["Vortag POC", "#7c6bd6", 1, "sess", 0], pVAH: ["Vortag VAH", "#5d5491", 1, "sess", 0], pVAL: ["Vortag VAL", "#5d5491", 1, "sess", 0],
+  PDH: ["Vortag High", "#9aa7ff", 1, "sess", 1], PDL: ["Vortag Low", "#9aa7ff", 1, "sess", 1], PDC: ["Vortag Close", "#6b7290", 1, "sess", 0],
+  pVWAP: ["Vortag VWAP", "#d9dbe4", 1, "sess", 0], ONH: ["Overnight High", "#3cc8ff", 1, "sess", 0], ONL: ["Overnight Low", "#3cc8ff", 1, "sess", 0]
 };
-let chart, candle, deltaS, cvdS, vwapS, lines = [], DATA, show = {gex: true, vp: true, sess: true, vwap: true, abs: true};
+const INFO = {
+  vp: "<b>Volume Profile</b> (lila Balken rechts): wo in dieser Session am meisten gehandelt wurde. <b>POC</b> (orange) = Preis mit dem meisten Volumen, wirkt oft wie ein Magnet. <b>Value Area</b> (VAH–VAL) = 70 % des Volumens, der „faire“ Bereich. Außerhalb davon ist der Preis entweder im Trend oder wird zurückgeholt.",
+  abs: "<b>Absorption ●</b>: Kerze mit sehr viel Volumen und einseitigem Delta, aber der Preis bewegt sich nicht in diese Richtung. Heißt: große Limit-Orders fangen den Druck ab. <span class='up'>Grün</span> = Verkäufer werden absorbiert (möglicher Boden), <span class='down'>rot</span> = Käufer werden absorbiert (mögliches Top).",
+  delta: "<b>Delta</b> pro Kerze = aggressive Käufe minus aggressive Verkäufe. <span class='up'>Grün</span> = Käufer drücken, <span class='down'>rot</span> = Verkäufer drücken. Großes Delta ohne Preisbewegung = Absorption. Hinweis: geschätzt aus 1-Min-Daten, kein echtes Bid/Ask.",
+  cvd: "<b>CVD</b> = Delta aufsummiert seit Session-Start (00:00 MEZ). Läuft parallel zum Preis = Bewegung ist gesund. <b>Divergenz</b>: Preis macht neues Hoch, CVD nicht = Käufer werden müde (und umgekehrt)."
+};
+const mobile = () => innerWidth < 800;
+const sessId = t => new Date((t + 6 * 3600) * 1000).toLocaleDateString("en-CA", {timeZone: "America/New_York"});
+const dayTime = t => new Date(t * 1000).toLocaleString("de-DE", {timeZone: "Europe/Berlin", weekday: "short", hour: "2-digit", minute: "2-digit"});
+let chart, dchart, cchart, candle, deltaS, cvdS, vwapS, lines = [], DATA, show = {gex: true, vp: true, sess: true, vwap: true, abs: true, more: false};
 
 function initChart() {
   const tf = t => new Date(t * 1000).toLocaleTimeString("de-DE", {timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit"});
-  chart = LightweightCharts.createChart($("chart"), {
+  const base = showTime => ({
     autoSize: true,
-    layout: {background: {type: "solid", color: "transparent"}, textColor: "#8a90a6", fontFamily: "JetBrains Mono, monospace", fontSize: 11},
+    layout: {background: {type: "solid", color: "transparent"}, textColor: "#8a90a6", fontFamily: "JetBrains Mono, monospace", fontSize: 11, attributionLogo: showTime},
     grid: {vertLines: {color: "rgba(255,255,255,.035)"}, horzLines: {color: "rgba(255,255,255,.035)"}},
-    rightPriceScale: {borderColor: "rgba(255,255,255,.08)", scaleMargins: {top: .04, bottom: .36}},
-    timeScale: {borderColor: "rgba(255,255,255,.08)", timeVisible: true, tickMarkFormatter: tf, rightOffset: 14, barSpacing: 7},
+    rightPriceScale: {borderColor: "rgba(255,255,255,.08)", minimumWidth: 86},
+    timeScale: {borderColor: "rgba(255,255,255,.08)", timeVisible: true, tickMarkFormatter: tf, rightOffset: 14, barSpacing: 7, visible: showTime},
     localization: {timeFormatter: tf, priceFormatter: p => fmt(p, 2)},
-    crosshair: {mode: 0, vertLine: {color: "rgba(255,138,31,.4)", labelBackgroundColor: "#ff8a1f"}, horzLine: {color: "rgba(255,138,31,.4)", labelBackgroundColor: "#ff8a1f"}}
+    crosshair: {mode: 0, vertLine: {color: "rgba(255,138,31,.4)", labelBackgroundColor: "#ff8a1f"}, horzLine: {color: "rgba(255,138,31,.4)", labelBackgroundColor: "#ff8a1f"}},
+    handleScale: {axisPressedMouseMove: {price: true, time: true}}
   });
+  chart = LightweightCharts.createChart($("chart"), base(false));
+  dchart = LightweightCharts.createChart($("dchart"), base(false));
+  cchart = LightweightCharts.createChart($("cchart"), base(true));
+  const kf = {type: "custom", formatter: v => kfmt(v).replace("+", "")};
   candle = chart.addCandlestickSeries({upColor: "#22e39b", downColor: "#ff4d6d", borderVisible: false, wickUpColor: "#22e39b", wickDownColor: "#ff4d6d"});
   vwapS = chart.addLineSeries({color: "#ff8a1f", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false});
-  deltaS = chart.addHistogramSeries({priceScaleId: "delta", priceLineVisible: false, lastValueVisible: false});
-  chart.priceScale("delta").applyOptions({scaleMargins: {top: .67, bottom: .17}});
-  cvdS = chart.addAreaSeries({priceScaleId: "cvd", lineColor: "#3cc8ff", topColor: "rgba(60,200,255,.25)", bottomColor: "rgba(60,200,255,0)", lineWidth: 2, priceLineVisible: false, lastValueVisible: false});
-  chart.priceScale("cvd").applyOptions({scaleMargins: {top: .85, bottom: .02}});
+  deltaS = dchart.addHistogramSeries({priceLineVisible: false, lastValueVisible: false, priceFormat: kf});
+  dchart.priceScale("right").applyOptions({scaleMargins: {top: .22, bottom: .06}});
+  cvdS = cchart.addAreaSeries({lineColor: "#3cc8ff", topColor: "rgba(60,200,255,.25)", bottomColor: "rgba(60,200,255,0)", lineWidth: 2, priceLineVisible: false, priceFormat: kf});
+  cchart.priceScale("right").applyOptions({scaleMargins: {top: .22, bottom: .06}});
+  const all = [chart, dchart, cchart];
+  let sync = false;
+  all.forEach(c => c.timeScale().subscribeVisibleLogicalRangeChange(r => {
+    if (sync || !r) return; sync = true; all.forEach(o => o !== c && o.timeScale().setVisibleLogicalRange(r)); sync = false;
+  }));
   requestAnimationFrame(drawVP);
-}
-
-function placeLabels() {
-  const h = $("chart").clientHeight;
-  $("labDelta").style.top = (h * .66) + "px";
-  $("labCvd").style.top = (h * .84) + "px";
 }
 
 function drawVP() {
   const cv = $("vp"), wrap = $("chart");
   const dpr = devicePixelRatio || 1, W = wrap.clientWidth, H = wrap.clientHeight;
-  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px"; placeLabels(); }
+  if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px"; }
   const ctx = cv.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -295,10 +325,10 @@ function drawVP() {
     const right = W - chart.priceScale("right").width() - 4, maxW = Math.min(150, W * .18);
     const mx = Math.max(...vp.bins.map(b => b[1]));
     const step = vp.bins.length > 1 ? Math.abs(vp.bins[1][0] - vp.bins[0][0]) : 5;
-    const limit = H * .64;
+    const limit = H;
     for (const [p, v] of vp.bins) {
       const y1 = candle.priceToCoordinate(p + step / 2), y2 = candle.priceToCoordinate(p - step / 2);
-      if (y1 == null || y2 == null || y2 < 0 || y1 > limit) continue;
+      if (y1 == null || y2 == null || Math.max(y1, y2) < 0 || Math.min(y1, y2) > limit) continue;
       const h = Math.max(1, Math.abs(y2 - y1) - 1), w = v / mx * maxW;
       const inVA = p >= vp.val && p <= vp.vah, isPoc = Math.abs(p - vp.poc) < step / 2;
       ctx.fillStyle = isPoc ? "rgba(255,138,31,.85)" : inVA ? "rgba(167,139,250,.45)" : "rgba(167,139,250,.16)";
@@ -320,14 +350,14 @@ function allLevels(d) {
 
 function drawLevels() {
   lines.forEach(l => candle.removePriceLine(l)); lines = [];
-  allLevels(DATA).filter(l => show[TAG[l.tag][3]]).forEach(l => {
+  allLevels(DATA).filter(l => show[TAG[l.tag][3]] && (TAG[l.tag][4] || show.more)).forEach(l => {
     const [name, col, w, g] = TAG[l.tag];
     lines.push(candle.createPriceLine({price: l.price, color: col, lineWidth: w,
-      lineStyle: l.tag === "ZG" ? 2 : g === "sess" ? 1 : g === "vp" && l.tag !== "POC" ? 3 : 0, axisLabelVisible: true, title: name}));
+      lineStyle: l.tag === "ZG" ? 2 : g === "sess" ? 1 : g === "vp" && l.tag !== "POC" ? 3 : 0, axisLabelVisible: true, title: mobile() ? "" : name}));
   });
   const ab = DATA?.orderflow?.absorption || [];
   candle.setMarkers(show.abs ? ab.map(a => ({time: a.time, position: a.side === "bull" ? "belowBar" : "aboveBar",
-    color: a.side === "bull" ? "#22e39b" : "#ff4d6d", shape: "circle", text: "ABS"})) : []);
+    color: a.side === "bull" ? "#22e39b" : "#ff4d6d", shape: "circle", text: mobile() ? "" : "ABS"})) : []);
   vwapS.applyOptions({visible: show.vwap});
 }
 
@@ -355,9 +385,14 @@ function render(d) {
 
   // Chart
   const cs = d.nq?.candles || [];
+  const lastT = cs.length ? cs[cs.length - 1].time : null, closed = lastT && (Date.now() / 1000 - lastT) > 45 * 60;
+  $("mktBadge").className = "badge " + (closed ? "closed" : "live");
+  $("mktBadge").textContent = lastT ? (closed ? `Markt zu · Daten von ${dayTime(lastT)}` : "Live · verzögert") : "";
+  if (!cs.length) { overlay("Keine Kursdaten", "Die Datenquelle hat gerade nichts geliefert. Nächster Versuch beim nächsten Update (alle 15 Min)."); }
+  else $("overlay").classList.add("off");
   candle.setData(cs.map(c => ({time: c.time, open: c.open, high: c.high, low: c.low, close: c.close})));
   deltaS.setData(cs.map(c => ({time: c.time, value: c.delta || 0, color: (c.delta || 0) >= 0 ? "rgba(34,227,155,.75)" : "rgba(255,77,109,.75)"})));
-  cvdS.setData(cs.filter(c => c.cvd != null).map(c => ({time: c.time, value: c.cvd})));
+  cvdS.setData(cs.map(c => ({time: c.time, value: c.cvd ?? 0})));
   vwapS.setData(cs.filter(c => c.vwap != null).map(c => ({time: c.time, value: c.vwap})));
   drawLevels();
   if (!render.zoomed && cs.length) { chart.timeScale().setVisibleLogicalRange({from: cs.length - Math.min(160, Math.round($("chart").clientWidth / 6)), to: cs.length + 12}); render.zoomed = true; }
@@ -380,9 +415,12 @@ function render(d) {
   // Signale
   const sig = [];
   if (of.divergence) sig.push({time: null, side: of.divergence, txt: of.divergence === "bear" ? "Delta-Divergenz: neues Hoch, Käufer fehlen" : "Delta-Divergenz: neues Tief, Verkäufer fehlen", tag: "DIV"});
-  (of.absorption || []).slice(-5).reverse().forEach(a => sig.push({time: a.time, side: a.side, tag: "ABS",
+  const absAll = of.absorption || [], absCur = absAll.filter(a => sessId(a.time) === of.session);
+  const absShow = (absCur.length ? absCur : absAll.slice(-2)).slice(-5).reverse();
+  $("sigSub").textContent = absCur.length ? "aktuelle Session" : "keine in dieser Session · ältere:";
+  absShow.forEach(a => sig.push({time: a.time, side: a.side, tag: "ABS",
     txt: `${a.side === "bull" ? "Verkäufer absorbiert" : "Käufer absorbiert"} @ ${fmt(a.price, 0)} · ${fmt(a.vol_x, 1)}× Vol`}));
-  $("signals").innerHTML = sig.map(s => `<div class="sig"><span class="tag ${s.side}">${s.tag}</span><span>${s.txt}</span><span class="muted num">${s.time ? new Date(s.time * 1000).toLocaleTimeString("de-DE", {timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit"}) : "jetzt"}</span></div>`).join("") || '<span class="muted">Keine Signale in letzter Zeit</span>';
+  $("signals").innerHTML = sig.map(s => `<div class="sig"><span class="tag ${s.side}">${s.tag}</span><span>${s.txt}</span><span class="muted num">${s.time ? dayTime(s.time) : "jetzt"}</span></div>`).join("") || '<span class="muted">Keine Signale</span>';
 
   // Nächste News
   const now = Date.now();
@@ -437,8 +475,28 @@ async function load() {
   try {
     const r = await fetch("data/latest.json?t=" + Date.now(), {cache: "no-store"});
     render(await r.json());
-  } catch (e) { console.error(e); $("stamp").textContent = "Daten konnten nicht geladen werden"; $("dot").className = "dot old"; }
+  } catch (e) {
+    console.error(e); $("stamp").textContent = "Keine Verbindung"; $("dot").className = "dot old";
+    if (!DATA) overlay("Daten konnten nicht geladen werden", "Prüf deine Internetverbindung. Die Seite versucht es alle 5 Min von selbst erneut.", true);
+  }
 }
+function overlay(title, text, retry) {
+  const o = $("overlay"); o.classList.remove("off");
+  o.innerHTML = `<div><b>${title}</b>${text}${retry ? '<br><button onclick="load()">Jetzt erneut versuchen</button>' : ""}</div>`;
+}
+document.querySelectorAll(".info").forEach(b => b.onclick = e => {
+  e.stopPropagation();
+  const p = $("pop"), on = b.classList.contains("on");
+  document.querySelectorAll(".info").forEach(x => x.classList.remove("on"));
+  if (on) { p.classList.remove("on"); return; }
+  b.classList.add("on"); p.innerHTML = INFO[b.dataset.i];
+  const wr = b.closest(".chartwrap").getBoundingClientRect(), br = b.getBoundingClientRect();
+  const below = br.bottom - wr.top < wr.height * .55;
+  p.style.top = below ? (br.bottom - wr.top + 6) + "px" : "auto";
+  p.style.bottom = below ? "auto" : (wr.bottom - br.top + 6) + "px";
+  p.classList.add("on");
+});
+document.addEventListener("click", () => { $("pop").classList.remove("on"); document.querySelectorAll(".info").forEach(x => x.classList.remove("on")); });
 
 const PAGES = [["cockpit", "Cockpit", "◉"], ["optionen", "Optionen", "◭"], ["news", "News", "≡"], ["markt", "Markt", "◫"]];
 $("topnav").innerHTML = PAGES.map(([id, n]) => `<a href="#${id}" data-p="${id}">${n}</a>`).join("");
@@ -457,6 +515,7 @@ $("copyBtn").onclick = async () => {
   setTimeout(() => $("copyBtn").textContent = "GEX-Level für TradingView kopieren", 2500);
 };
 route(); initChart(); load(); setInterval(load, 5 * 60 * 1000);
+addEventListener("resize", () => DATA && drawLevels());
 </script>
 </body>
 </html>

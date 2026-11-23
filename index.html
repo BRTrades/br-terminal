@@ -47,6 +47,7 @@ a,button{cursor:pointer}
 /* Arbeitsfläche */
 .page{display:none;flex:1;min-height:0}.page.on{display:flex;flex-direction:column}
 .ws{flex:1;display:grid;grid-template-columns:1fr 290px;gap:1px;background:var(--line);min-height:0}
+@media(min-width:901px){.ws{flex:none;height:calc(100vh - 56px);min-height:620px;grid-template-rows:minmax(0,1fr)}.col{grid-template-rows:minmax(0,1fr) auto auto}.ws>.pnl,.col,.col>.pnl{min-height:0;overflow:hidden}.chartwrap{min-height:0}}
 @media(max-width:900px){.ws{grid-template-columns:1fr}}
 .pnl{background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0}
 .ph{display:flex;align-items:center;height:26px;background:var(--head);border-bottom:1px solid var(--line);padding:0 8px;gap:8px;flex:none}
@@ -212,6 +213,15 @@ const hm = t => new Date(t * 1000).toLocaleTimeString("de-DE", {timeZone: "Europ
 const dhm = t => new Date(t * 1000).toLocaleString("de-DE", {timeZone: "Europe/Berlin", weekday: "short", hour: "2-digit", minute: "2-digit"});
 const sessId = t => new Date((t + 6 * 3600) * 1000).toLocaleDateString("en-CA", {timeZone: "America/New_York"});
 const narrow = () => innerWidth < 900;
+// CME-Handelszeiten (New York): So 18:00 – Fr 17:00, täglich Pause 17–18 Uhr
+function cmeOpen(d = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", hour12: false}).formatToParts(d).map(x => [x.type, x.value]));
+  const h = +p.hour % 24, w = p.weekday;
+  if (w === "Sat") return false;
+  if (w === "Sun") return h >= 18;
+  if (w === "Fri") return h < 17;
+  return h !== 17;
+}
 const TAG = {CW: ["CW", "#1fbf75", 1], PW: ["PW", "#e5484d", 1], ZG: ["ZG", "#f0a92e", 1], "G+": ["G+", "#4f9e86", 0], "G-": ["G−", "#a5585b", 0],
   POC: ["POC", "#f0a92e", 1], VAH: ["VAH", "#8b929e", 1], VAL: ["VAL", "#8b929e", 1], PDH: ["PDH", "#6f8fd8", 1], PDL: ["PDL", "#6f8fd8", 1],
   PDC: ["PDC", "#59606b", 0], pVWAP: ["pVWAP", "#9aa0aa", 0], ONH: ["ONH", "#4fa3c7", 0], ONL: ["ONL", "#4fa3c7", 0], pPOC: ["pPOC", "#a07a3a", 0]};
@@ -349,10 +359,10 @@ function ladder(d) {
 function render(d) {
   D = d; paint.q = paint.vmax = null;
   const age = (Date.now() - new Date(d.updated)) / 60000, cs = d.nq?.candles || [], lastT = cs.length ? cs[cs.length - 1].time : 0;
-  const closed = lastT && Date.now() / 1000 - lastT > 45 * 60;
-  $("stat").textContent = (closed ? "Markt zu · " : "") + `Update vor ${Math.round(age)} Min`;
-  $("led").className = "led" + (closed || age > 40 ? " off" : "");
-  $("mk").textContent = closed ? `Stand ${dhm(lastT)}` : "verzögert";
+  const open = cmeOpen(), stale = lastT && Date.now() / 1000 - lastT > 45 * 60;
+  $("stat").textContent = (!open ? "Markt zu · " : stale ? "Daten veraltet · " : "") + `Update vor ${Math.round(age)} Min`;
+  $("led").className = "led" + (!open || stale || age > 40 ? " off" : "");
+  $("mk").textContent = !open || stale ? `Stand ${dhm(lastT)}` : "verzögert";
   const nqm = (d.market || []).find(m => m.sym === "NQ=F");
   $("px").textContent = fmt(d.nq?.last); $("chg").innerHTML = nqm ? pc(nqm.chg_pct) : "";
   if (!cs.length) return ov("Keine Kursdaten", "Nächster Versuch beim nächsten Update.");
